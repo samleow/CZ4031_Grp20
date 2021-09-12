@@ -1,13 +1,28 @@
 
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
-struct MovieRating
+struct Record
 {
-    string id;
+    int id;
     float avg_rating;
     int num_of_votes;
+    
+    int getRecordSize()
+    {
+        return sizeof(id) + sizeof(avg_rating) + sizeof(num_of_votes);
+    }
+};
+
+struct Disk_Block
+{
+    // header includes id and record length
+    int id;
+    int record_len;
+
+    vector<Record> records;
 };
 
 // block_size = 100B / 500B
@@ -28,5 +43,60 @@ struct MovieRating
 
 int main()
 {
-    cout << "Hello world!" << endl;
+
+    // disk capacity (in MB)
+    // 100 - 500
+    int disk_cap = 100;
+    cout << "Disk capacity:\t" << disk_cap << "MB" << endl;
+
+    // block size (in B)
+    // should get input for block size 100 or 500
+    int block_size = 100;
+    cout << "Block size:\t" << block_size << "B"  << endl;
+
+    // number of blocks in the disk
+    int blocks_in_disk = (disk_cap * pow(10,6)) / block_size;
+    cout << "Blocks in disk:\t" << blocks_in_disk << endl;
+
+    // temp record to get a record size
+    // there should be a better way to get a struct size before initialization ...
+    Record t = { 1, 1.5, 5 };
+    cout << "Record temp :\tid = " << t.id << "\tavg_rating = " << t.avg_rating << "\tnum_of_votes = " << t.num_of_votes << "\tr_size = " << t.getRecordSize() << "B" << endl;
+    cout << "Record size:\t" << sizeof(t) << "B"  << endl;
+
+    // this is not accounting for header size !!
+    // not sure if correct or not !!
+    // if accounting for header size, need to be = floor((block_size - sizeof(Disk_Block.id) - sizeof(Disk_Block.record_len)) / sizeof(t))
+    int records_per_block = floor(block_size / sizeof(t));
+    cout << "Num of records in a block:\t" << records_per_block << endl << endl;
+
+    // read from data file here onwards
+    // Get data and store to "disk"
+    // need count number of records to store and check if disk capacity can hold all data
+
+#pragma region testing block and record init
+
+    // testing block and record init
+    // for now testing with only one block
+    Disk_Block b1;
+    b1.id = 1;
+    b1.record_len = sizeof(t);
+    b1.records.resize(records_per_block);
+
+    for (int i=0; i<records_per_block; i++)
+    {
+        // dummy values
+        Record r = {i, 1.5*i, 2*i};
+        // this is passing by value
+        // will be good to pass by reference
+        b1.records[i] = r;
+    }
+
+    for (int i=0; i<b1.records.size(); i++)
+    {
+        cout << "Block 1 record " << b1.records[i].id << "'s avg rating:\t\t" << b1.records[i].avg_rating << endl;
+        cout << "Block 1 record " << b1.records[i].id << "'s num of votes:\t" << b1.records[i].num_of_votes << endl << endl;
+    }
+#pragma endregion
+
 }
