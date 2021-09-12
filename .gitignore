@@ -65,5 +65,3 @@ bld/
 *.out
 *.app
 
-# Data
-*.tsv
