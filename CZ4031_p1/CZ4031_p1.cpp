@@ -71,13 +71,18 @@ int getTotalRecordCount() {
     return line_count;
 }
 
-void retrieveData(Disk_Block *disk)
+Disk_Block* retrieveData()
 {
     ifstream myfile;
     myfile.open("data.tsv");
 
     string line;
     bool skippedFirstLine = false;
+    int rec_counter = 0;
+    int blk_counter = 0;
+
+    // returning pointer to array seems to work
+    Disk_Block disk[9];
 
     while (getline(myfile, line))
     {
@@ -85,20 +90,48 @@ void retrieveData(Disk_Block *disk)
             skippedFirstLine = true;
         else
         {
-            //string id = line.substr(2,7);
-            cout << line << endl;
-            break;
+            if (++rec_counter > RECORDS_PER_BLOCK)
+            {
+                if (++blk_counter >= 9)
+                    break;
+                rec_counter = 0;
+            }
+
+            Record r;
+            string id = line.substr(2,7);
+            r.id = stoi(id);
+            string avg_rating = line.substr(10, 3);
+            r.avg_rating = stof(avg_rating);
+            string num_of_votes = line.substr(14);
+            r.num_of_votes = stoi(num_of_votes);
+
+            disk[blk_counter].records[rec_counter - 1] = r;
         }
     }
 
     myfile.close();
+
+    return &disk[0];
 
 }
 
 int main()
 {
 
+#pragma region testing Disk_block
+
     //Disk_Block Disk[BLOCKS_IN_DISK];
+
+   /* Disk_Block* d;
+    d = retrieveData();
+
+    // array access by pointer not working ...
+    cout << d[0].records[2].num_of_votes << endl;
+    cout << d[5].records[RECORDS_PER_BLOCK - 1].id << endl;
+    cout << d[5].records[RECORDS_PER_BLOCK-1].num_of_votes << endl;
+    cout << RECORDS_PER_BLOCK << endl;*/
+
+#pragma endregion
 
     // disk capacity
     cout << "Disk capacity:\t" << DISK_SIZE << "B" << endl;
@@ -120,7 +153,7 @@ int main()
     // Get data and store to "disk"
     // need count number of records to store and check if disk capacity can hold all data
 
-    cout << getTotalRecordCount() << endl << endl;
+    //cout << getTotalRecordCount() << endl << endl;
 
 #pragma region testing block and record init
 
