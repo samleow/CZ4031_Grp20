@@ -19,9 +19,13 @@ struct Record
 struct Disk_Block
 {
     // header includes id and record length
+    // not sure if can omit header
     int id;
     int record_len;
 
+    // using vector as a variable length list
+    // preferred to use array
+    // need recheck Disk_Block total size, coz vector may affect size
     vector<Record> records;
 };
 
@@ -58,16 +62,12 @@ int main()
     int blocks_in_disk = (disk_cap * pow(10,6)) / block_size;
     cout << "Blocks in disk:\t" << blocks_in_disk << endl;
 
-    // temp record to get a record size
-    // there should be a better way to get a struct size before initialization ...
-    Record t = { 1, 1.5, 5 };
-    cout << "Record temp :\tid = " << t.id << "\tavg_rating = " << t.avg_rating << "\tnum_of_votes = " << t.num_of_votes << "\tr_size = " << t.getRecordSize() << "B" << endl;
-    cout << "Record size:\t" << sizeof(t) << "B"  << endl;
+    cout << "Record size:\t" << sizeof(Record) << "B"  << endl;
 
     // this is not accounting for header size !!
     // not sure if correct or not !!
     // if accounting for header size, need to be = floor((block_size - sizeof(Disk_Block.id) - sizeof(Disk_Block.record_len)) / sizeof(t))
-    int records_per_block = floor(block_size / sizeof(t));
+    int records_per_block = floor(block_size / sizeof(Record));
     cout << "Num of records in a block:\t" << records_per_block << endl << endl;
 
     // read from data file here onwards
@@ -80,7 +80,7 @@ int main()
     // for now testing with only one block
     Disk_Block b1;
     b1.id = 1;
-    b1.record_len = sizeof(t);
+    b1.record_len = sizeof(Record);
     b1.records.resize(records_per_block);
 
     for (int i=0; i<records_per_block; i++)
@@ -91,6 +91,10 @@ int main()
         // will be good to pass by reference
         b1.records[i] = r;
     }
+    cout << "Block 1 size: " << sizeof(b1) << "B" << endl;
+    cout << "vector size: " << sizeof(vector<Record>) << "B" << endl;
+    cout << "Block 1 vector size: " << sizeof(Record)*b1.records.size() << "B" << endl;
+    cout << "Block 1 actual size: " << sizeof(b1) + sizeof(Record) * b1.records.size() << "B" << endl << endl;
 
     for (int i=0; i<b1.records.size(); i++)
     {
