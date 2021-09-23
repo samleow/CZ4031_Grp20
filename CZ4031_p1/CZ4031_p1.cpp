@@ -71,7 +71,7 @@ int getTotalRecordCount() {
     return line_count;
 }
 
-Disk_Block* retrieveData()
+void retrieveData(Disk_Block *disk)
 {
     ifstream myfile;
     myfile.open("data.tsv");
@@ -81,58 +81,39 @@ Disk_Block* retrieveData()
     int rec_counter = 0;
     int blk_counter = 0;
 
-    // returning pointer to array seems to work
-    Disk_Block disk[9];
-
     while (getline(myfile, line))
     {
         if (!skippedFirstLine)
             skippedFirstLine = true;
         else
         {
-            if (++rec_counter > RECORDS_PER_BLOCK)
+            if (rec_counter >= RECORDS_PER_BLOCK)
             {
+                disk[blk_counter].id = blk_counter + 1;
                 if (++blk_counter >= 9)
                     break;
                 rec_counter = 0;
             }
 
             Record r;
-            string id = line.substr(2,7);
+            string id = line.substr(2, 7);
             r.id = stoi(id);
             string avg_rating = line.substr(10, 3);
             r.avg_rating = stof(avg_rating);
             string num_of_votes = line.substr(14);
             r.num_of_votes = stoi(num_of_votes);
 
-            disk[blk_counter].records[rec_counter - 1] = r;
+            disk[blk_counter].records[rec_counter] = r;
+            rec_counter++;
         }
     }
 
     myfile.close();
 
-    return &disk[0];
-
 }
 
 int main()
 {
-
-#pragma region testing Disk_block
-
-    //Disk_Block Disk[BLOCKS_IN_DISK];
-
-   /* Disk_Block* d;
-    d = retrieveData();
-
-    // array access by pointer not working ...
-    cout << d[0].records[2].num_of_votes << endl;
-    cout << d[5].records[RECORDS_PER_BLOCK - 1].id << endl;
-    cout << d[5].records[RECORDS_PER_BLOCK-1].num_of_votes << endl;
-    cout << RECORDS_PER_BLOCK << endl;*/
-
-#pragma endregion
-
     // disk capacity
     cout << "Disk capacity:\t" << DISK_SIZE << "B" << endl;
 
@@ -149,35 +130,34 @@ int main()
     // if accounting for header size, need to be = floor((block_size - sizeof(Disk_Block.id) - sizeof(Disk_Block.record_len)) / sizeof(t))
     cout << "Num of records in a block:\t" << RECORDS_PER_BLOCK << endl << endl;
 
-    // read from data file here onwards
-    // Get data and store to "disk"
-    // need count number of records to store and check if disk capacity can hold all data
-
     //cout << getTotalRecordCount() << endl << endl;
 
-#pragma region testing block and record init
+    // disk memory, containing all data blocks
+    Disk_Block* disk;
 
-    // testing block and record init
-    // for now testing with only one block
-    Disk_Block b1;
-    b1.id = 1;
-    
+    // for now just 9 blocks, coz stack mem not enough for all 9mil r
+    //Disk_Block Disk[BLOCKS_IN_DISK];
+    disk = new Disk_Block[9];
+    retrieveData(disk);
 
-    for (int i=0; i<RECORDS_PER_BLOCK; i++)
+#pragma region debugging Disk_block
+
+    // for debugging
+    int diskno = 0;
+    for (diskno = 0; diskno < 9; diskno++)
     {
-        // dummy values
-        Record r = {i, 1.5*i+1, 2*i+1};
-        // this is passing by value
-        // will be good to pass by reference
-        b1.records[i] = r;
+        cout << "Disk " << diskno << ":" << endl;
+        cout << "Disk id: " << disk[diskno].id << endl;
+        for (int i = 0; i < RECORDS_PER_BLOCK; i++)
+        {
+            cout << disk[diskno].records[i].id << " :\t" << disk[diskno].records[i].avg_rating << "\t| " << disk[diskno].records[i].num_of_votes << endl;
+        }
+        cout << endl;
     }
-    cout << "Block 1 size: " << sizeof(b1) << "B" << endl;
 
-    for (int i=0; i<RECORDS_PER_BLOCK; i++)
-    {
-        cout << "Block 1 record " << b1.records[i].id << "'s avg rating:\t\t" << b1.records[i].avg_rating << endl;
-        cout << "Block 1 record " << b1.records[i].id << "'s num of votes:\t" << b1.records[i].num_of_votes << endl << endl;
-    }
 #pragma endregion
 
+
+    // deletes memory from pointer
+    delete[] disk;
 }
