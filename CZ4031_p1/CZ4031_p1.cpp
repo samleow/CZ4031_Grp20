@@ -71,7 +71,7 @@ int getTotalRecordCount() {
     return line_count;
 }
 
-void retrieveData(Disk_Block *disk)
+void retrieveData(Disk_Block *disk, int blocks_utilized)
 {
     ifstream myfile;
     myfile.open("data.tsv");
@@ -90,7 +90,7 @@ void retrieveData(Disk_Block *disk)
             if (rec_counter >= RECORDS_PER_BLOCK)
             {
                 disk[blk_counter].id = blk_counter + 1;
-                if (++blk_counter >= 9)
+                if (++blk_counter >= blocks_utilized)
                     break;
                 rec_counter = 0;
             }
@@ -114,46 +114,55 @@ void retrieveData(Disk_Block *disk)
 
 int main()
 {
-    // disk capacity
+    // Total number of records in data
+    // initialized as -1 for debugging
+    int TOTAL_RECORD_COUNT = -1;
+    // Total number of blocks utilized to store records
+    // initialized as -1 for debugging
+    int BLOCKS_WITH_RECORDS = -1;
+
+
     cout << "Disk capacity:\t" << DISK_SIZE << "B" << endl;
-
-    // block size
     cout << "Block size:\t" << BLOCK_SIZE << "B"  << endl;
-
-    // number of blocks in the disk
     cout << "Blocks in disk:\t" << BLOCKS_IN_DISK << endl;
-
     cout << "Record size:\t" << RECORD_SIZE << "B"  << endl;
+    cout << "Num of records in a block:\t" << RECORDS_PER_BLOCK << endl;
 
-    // this is not accounting for header size !!
-    // not sure if correct or not !!
-    // if accounting for header size, need to be = floor((block_size - sizeof(Disk_Block.id) - sizeof(Disk_Block.record_len)) / sizeof(t))
-    cout << "Num of records in a block:\t" << RECORDS_PER_BLOCK << endl << endl;
+    // initialized based on data.tsv
+    TOTAL_RECORD_COUNT = getTotalRecordCount();
+    cout << "Total num of records:\t" << TOTAL_RECORD_COUNT << endl;
 
-    //cout << getTotalRecordCount() << endl << endl;
+    // this is some weird ass shit right here 
+    // TODO FIXME
+    BLOCKS_WITH_RECORDS = (int)ceil(TOTAL_RECORD_COUNT/RECORDS_PER_BLOCK);
+    cout << "Num of blocks utilized:\t" << BLOCKS_WITH_RECORDS << endl;
+
 
     // disk memory, containing all data blocks
     Disk_Block* disk;
 
     // for now just 9 blocks, coz stack mem not enough for all 9mil r
     //Disk_Block Disk[BLOCKS_IN_DISK];
-    disk = new Disk_Block[9];
-    retrieveData(disk);
+    disk = new Disk_Block[BLOCKS_WITH_RECORDS];
+    retrieveData(disk, BLOCKS_WITH_RECORDS);
 
 #pragma region debugging Disk_block
 
     // for debugging
     int diskno = 0;
-    for (diskno = 0; diskno < 9; diskno++)
+
+    cout << "Input disk number to read records: ";
+    // lazy do error checking and handling
+    // must be 0 <= diskno < BLOCKS_WITH_RECORDS
+    cin >> diskno;
+
+    cout << endl << "Disk " << diskno << ":" << endl;
+    cout << "Disk id: " << disk[diskno].id << endl;
+    for (int i = 0; i < RECORDS_PER_BLOCK; i++)
     {
-        cout << "Disk " << diskno << ":" << endl;
-        cout << "Disk id: " << disk[diskno].id << endl;
-        for (int i = 0; i < RECORDS_PER_BLOCK; i++)
-        {
-            cout << disk[diskno].records[i].id << " :\t" << disk[diskno].records[i].avg_rating << "\t| " << disk[diskno].records[i].num_of_votes << endl;
-        }
-        cout << endl;
+        cout << disk[diskno].records[i].id << " :\t" << disk[diskno].records[i].avg_rating << "\t| " << disk[diskno].records[i].num_of_votes << endl;
     }
+    cout << endl;
 
 #pragma endregion
 
