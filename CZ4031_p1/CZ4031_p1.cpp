@@ -3,21 +3,22 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <math.h>
 
 using namespace std;
 
 #define DISK_SIZE           100000000
 #define BLOCK_SIZE          100
-#define BLOCKS_IN_DISK      DISK_SIZE/BLOCK_SIZE
+#define BLOCKS_IN_DISK      (DISK_SIZE/BLOCK_SIZE)
 #define RECORD_SIZE         sizeof(Record)
-#define RECORDS_PER_BLOCK   (BLOCK_SIZE-sizeof(int))/RECORD_SIZE
+#define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
 
 struct Record
 {
     int id;
     float avg_rating;
     int num_of_votes;
-    
+
     int getRecordSize()
     {
         return sizeof(id) + sizeof(avg_rating) + sizeof(num_of_votes);
@@ -39,14 +40,14 @@ struct Disk_Block
 // num_of_records = number of lines in data.tsv – 1 (header)
 // record_size = sizeof(int) + sizeof(float) + sizeof(int)
 // records_per_block = (block_size – header_size) / record_size
-// 
+//
 // Block header : int block_id, int record_size(? May not need if all records have same size)
-// 
+//
 // For packing of fields into records, use “Fixed format with fixed length”(easier, but wastes memory)
 // For packing records into blocks, use unspanned.
-// 
+//
 // For saving to disk, we can try saving into a .dat file
-// 
+//
 // As for disk memory simulated on main memory (experiment 1), we can just save to stack
 
 int getTotalRecordCount() {
@@ -120,6 +121,8 @@ int main()
     // Total number of blocks utilized to store records
     // initialized as -1 for debugging
     int BLOCKS_WITH_RECORDS = -1;
+    // Size of Database (Size of total blocks utilized in BYTES)
+    int DATABASE_SIZE = -1;
 
 
     cout << "Disk capacity:\t" << DISK_SIZE << "B" << endl;
@@ -132,11 +135,14 @@ int main()
     TOTAL_RECORD_COUNT = getTotalRecordCount();
     cout << "Total num of records:\t" << TOTAL_RECORD_COUNT << endl;
 
-    // this is some weird ass shit right here 
-    // TODO FIXME
-    BLOCKS_WITH_RECORDS = (int)ceil(TOTAL_RECORD_COUNT/RECORDS_PER_BLOCK);
+    cout << "\nExperiment 1:\t" << endl;
+
+    // this is some weird ass shit right here; HELL YEAHH ;D
+    BLOCKS_WITH_RECORDS = TOTAL_RECORD_COUNT/RECORDS_PER_BLOCK;
     cout << "Num of blocks utilized:\t" << BLOCKS_WITH_RECORDS << endl;
 
+    DATABASE_SIZE = BLOCKS_WITH_RECORDS*BLOCK_SIZE;
+    cout << "Size of database:\t" << static_cast<float>(DATABASE_SIZE)/1024/1024 << "MB\n" << endl;
 
     // disk memory, containing all data blocks
     Disk_Block* disk;
