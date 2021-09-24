@@ -13,6 +13,11 @@ using namespace std;
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
 
+#define POINTER_SIZE        sizeof(uintptr_t)//4
+#define N                   floor((BLOCK_SIZE-POINTER_SIZE)/(POINTER_SIZE+sizeof(int)))
+
+#define DATA_FILE           "dataTest.tsv"
+
 struct Record
 {
     int id;
@@ -25,6 +30,7 @@ struct Record
     }
 };
 
+
 struct Disk_Block
 {
     // header includes id and record length
@@ -32,6 +38,89 @@ struct Disk_Block
     int id;
 
     Record records[RECORDS_PER_BLOCK];
+};
+
+class Node
+{
+public:
+    uintptr_t* ptr;
+    int* key;
+
+    Node()
+    {
+        ptr = new uintptr_t[N + 1]{0};
+        key = new int[N] {0};
+    }
+
+    ~Node()
+    {
+        delete[] ptr;
+        delete[] key;
+    }
+
+    bool isLeafNode()
+    {
+        // check if first ptr points to a Record
+        if (ptr[0])
+            return true;
+
+        return false;
+    }
+};
+
+class BPlusTree
+{
+public:
+
+    Node* root;
+    //Node* first_leaf;
+
+    BPlusTree()
+    {
+        root = NULL;
+        //first_leaf = NULL;
+    }
+
+    ~BPlusTree()
+    {
+        delete root;
+        //delete first_leaf;
+    }
+
+    void addNode(Node n)
+    {
+
+    }
+
+    void addRecord(Record *r)
+    {
+        // needs static if not node will be deleted
+        // however, not sure if node will be overwritten on subsequent calls
+        // instead of having a new instance created
+        static Node n;
+        if (!root)
+        {
+            root = &n;
+            n.ptr[0] = (uintptr_t )r;
+        }
+        else
+        {
+            root->ptr[1] = (uintptr_t)r;
+        }
+    }
+    
+    Record* getRecord(int key)
+    {
+        // search from root
+
+        if (!root)
+        {
+            return NULL;
+        }
+
+        return reinterpret_cast<Record *>(root->ptr[key]);
+    }
+
 };
 
 // block_size = 100B / 500B
@@ -53,7 +142,7 @@ struct Disk_Block
 int getTotalRecordCount() {
 
     ifstream myfile;
-    myfile.open("data.tsv");
+    myfile.open(DATA_FILE);
 
     string line;
     int line_count = 0;
@@ -75,7 +164,7 @@ int getTotalRecordCount() {
 void retrieveData(Disk_Block *disk, int blocks_utilized)
 {
     ifstream myfile;
-    myfile.open("data.tsv");
+    myfile.open(DATA_FILE);
 
     string line;
     bool skippedFirstLine = false;
@@ -91,6 +180,7 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
             if (rec_counter >= RECORDS_PER_BLOCK)
             {
                 disk[blk_counter].id = blk_counter + 1;
+
                 if (++blk_counter >= blocks_utilized)
                     break;
                 rec_counter = 0;
@@ -107,6 +197,15 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
             disk[blk_counter].records[rec_counter] = r;
             rec_counter++;
         }
+    }
+
+    // last block
+    disk[blocks_utilized - 1].id = blocks_utilized;
+    for (int i = rec_counter; i < RECORDS_PER_BLOCK; i++)
+    {
+        disk[blocks_utilized - 1].records[i].id = NULL;
+        disk[blocks_utilized - 1].records[i].avg_rating = NULL;
+        disk[blocks_utilized - 1].records[i].num_of_votes = NULL;
     }
 
     myfile.close();
@@ -135,10 +234,11 @@ int main()
     TOTAL_RECORD_COUNT = getTotalRecordCount();
     cout << "Total num of records:\t" << TOTAL_RECORD_COUNT << endl;
 
-    cout << "\nExperiment 1:\t" << endl;
+#pragma region Experiment 1
 
-    // this is some weird ass shit right here; HELL YEAHH ;D
-    BLOCKS_WITH_RECORDS = TOTAL_RECORD_COUNT/RECORDS_PER_BLOCK;
+    cout << "\n\tExperiment 1:" << endl;
+
+    BLOCKS_WITH_RECORDS = (int)ceil((float)TOTAL_RECORD_COUNT/(float)RECORDS_PER_BLOCK);
     cout << "Num of blocks utilized:\t" << BLOCKS_WITH_RECORDS << endl;
 
     DATABASE_SIZE = BLOCKS_WITH_RECORDS*BLOCK_SIZE;
@@ -152,27 +252,72 @@ int main()
     disk = new Disk_Block[BLOCKS_WITH_RECORDS];
     retrieveData(disk, BLOCKS_WITH_RECORDS);
 
-#pragma region debugging Disk_block
+#pragma endregion
 
-    // for debugging
-    int diskno = 0;
+#pragma region Experiment 2
 
-    cout << "Input disk number to read records: ";
-    // lazy do error checking and handling
-    // must be 0 <= diskno < BLOCKS_WITH_RECORDS
-    cin >> diskno;
+    cout << "\n\tExperiment 2:" << endl;
 
-    cout << endl << "Disk " << diskno << ":" << endl;
-    cout << "Disk id: " << disk[diskno].id << endl;
-    for (int i = 0; i < RECORDS_PER_BLOCK; i++)
-    {
-        cout << disk[diskno].records[i].id << " :\t" << disk[diskno].records[i].avg_rating << "\t| " << disk[diskno].records[i].num_of_votes << endl;
-    }
-    cout << endl;
+    cout << "\nSize of each pointer: " << POINTER_SIZE << "B" << endl;
+    cout << "Number of maximum keys in a B+ tree node (n): " << N << endl;
+
+    BPlusTree bpt;
+
+    Record r;
+    r.id = 4;
+    r.avg_rating = 3.5;
+    r.num_of_votes = 6;
+
+    Record r2;
+    r2.id = 9;
+    r2.avg_rating = 2.7;
+    r2.num_of_votes = 18;
+
+    bpt.addRecord(&r);
+    //bpt.addRecord(&r2);
+
+
+    cout << bpt.getRecord(0)->id << endl;
+    cout << bpt.getRecord(0)->avg_rating << endl;
+    cout << bpt.getRecord(0)->num_of_votes << endl;
+    //cout << bpt.getRecord(1)->id << endl;
+    //cout << bpt.getRecord(1)->avg_rating << endl;
+    //cout << bpt.getRecord(1)->num_of_votes << endl;
+
+    //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+    //{
+    //    for (int j = 0; j < RECORDS_PER_BLOCK; j++)
+    //    {
+    //        //bpt.addRecord(disk[i].records[j]);
+    //    }
+    //}
 
 #pragma endregion
 
+    
+#pragma region debugging Disk_block
+
+    // for debugging
+    //int diskno = 0;
+
+    //cout << "Input disk number to read records: ";
+    //// lazy do error checking and handling
+    //// must be 0 <= diskno < BLOCKS_WITH_RECORDS
+    //cin >> diskno;
+
+    //cout << endl << "Disk " << diskno << ":" << endl;
+    //cout << "Disk id: " << disk[diskno-1].id << endl;
+    //for (int i = 0; i < RECORDS_PER_BLOCK; i++)
+    //{
+    //    cout << disk[diskno-1].records[i].id << " :\t" << disk[diskno-1].records[i].avg_rating << "\t| " << disk[diskno-1].records[i].num_of_votes << endl;
+    //}
+    //cout << endl;
+
+#pragma endregion
+    
 
     // deletes memory from pointer
     delete[] disk;
+
+    return 0;
 }
