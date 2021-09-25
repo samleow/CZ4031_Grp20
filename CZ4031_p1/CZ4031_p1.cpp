@@ -14,7 +14,7 @@ using namespace std;
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
-const static int N = floor((BLOCK_SIZE-POINTER_SIZE)/(POINTER_SIZE+sizeof(int)));
+const static int N = 3;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 
 struct Record
 {
@@ -22,12 +22,24 @@ struct Record
     float avg_rating;
     int num_of_votes;
 
+    Record()
+    {
+        id = -1;
+        avg_rating = -1.0f;
+        num_of_votes = -1;
+    }
+    Record(int id, float avg_rating, int num_of_votes)
+    {
+        this->id = id;
+        this->avg_rating = avg_rating;
+        this->num_of_votes = num_of_votes;
+    }
+
     int getRecordSize()
     {
         return sizeof(id) + sizeof(avg_rating) + sizeof(num_of_votes);
     }
 };
-
 
 struct Disk_Block
 {
@@ -42,12 +54,15 @@ class Node
 {
 public:
     uintptr_t* ptr;
-    int* key;
+    int* key, size;
+    bool isLeaf;
 
     Node()
     {
         ptr = new uintptr_t[N + 1]{NULL};
         key = new int[N] {NULL};
+        isLeaf = false;
+        size = 0;
     }
 
     ~Node()
@@ -62,25 +77,76 @@ class BPlusTree
 public:
 
     Node* root;
-    Node* first_leaf;
-    int num_of_leaf_nodes;
+
+    // minimum and maximum keys
+    int min_key_in_leaf = floor((N + 1) / 2);
+    int min_key_in_nonleaf = floor(N / 2);
 
     BPlusTree()
     {
         root = NULL;
-        first_leaf = NULL;
-        num_of_leaf_nodes = 0;
     }
 
     ~BPlusTree()
     {
         //delete root;
-        //delete first_leaf;
     }
 
     void addNode(Node n)
     {
 
+    }
+
+    void insertIntoLeaf(Node* n, Record* r)
+    {
+        bool is_set = false;
+
+        for (int i = 0; i < n->size; i++)
+        {
+            if (r->num_of_votes < n->key[i])
+            {
+                for (int j = i; j < N - 1; j++)
+                {
+                    n->ptr[j + 1] = n->ptr[j];
+                    n->key[j + 1] = n->key[j];
+                }
+                n->ptr[i] = (uintptr_t)r;
+                n->key[i] = r->num_of_votes;
+                n->size++;
+                is_set = true;
+                break;
+            }
+        }
+
+        if (!is_set)
+        {
+            n->ptr[n->size] = (uintptr_t)r;
+            n->key[n->size] = r->num_of_votes;
+            n->size++;
+        }
+    }
+
+    void searchForLeafNodeWithKey(Node** n, Record* r)
+    {
+        while (!(*n)->isLeaf)
+        {
+            for (int i = 0; i < (*n)->size; i++)
+            {
+                // in left ptr
+                if (r->num_of_votes < (*n)->key[i])
+                {
+                    (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
+                    break;
+                }
+            }
+
+            if ((*n)->isLeaf)
+                break;
+            else
+            {
+                (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
+            }
+        }
     }
 
     void addRecord(Record *r)
@@ -89,13 +155,98 @@ public:
         {
             Node* n = new Node();
             root = n;
-            first_leaf = n;
-            num_of_leaf_nodes = 1;
+            n->isLeaf = true;
             n->ptr[0] = (uintptr_t )r;
+            n->key[0] = r->num_of_votes;
+            n->size++;
         }
         else
         {
-            root->ptr[1] = (uintptr_t)r;
+            Node* curr = root;
+            if (curr->isLeaf)
+            {
+                if (curr->size < N)
+                {
+                    // inserting a records into a leaf node with space
+                    insertIntoLeaf(curr, r);
+                }
+                else
+                {
+                    Node* n = new Node();
+                    curr->ptr[N] = (uintptr_t)n;
+                    n->isLeaf = true;
+
+                    int input_pos = -1;
+                    for (int i = 0; i < N; i++)
+                    {
+                        if (curr->key[i] <= r->num_of_votes && r->num_of_votes < curr->key[i+1])
+                        {
+                            input_pos = i+1;
+                        }
+                    }
+
+                    if (input_pos == -1)
+                    {
+                        for (int i = min_key_in_leaf; i < N; i++)
+                        {
+                            n->ptr[i - min_key_in_leaf] = curr->ptr[i];
+                            n->key[i - min_key_in_leaf] = curr->key[i];
+                            n->size++;
+                            curr->ptr[i] = NULL;
+                            curr->key[i] = NULL;
+                            curr->size--;
+                        }
+
+                        n->ptr[min_key_in_leaf-1] = (uintptr_t)r;
+                        n->key[min_key_in_leaf-1] = r->num_of_votes;
+                        n->size++;
+                    }
+                    else
+                    {
+                        for (int i = input_pos; i < N; i++)
+                        {
+                            n->ptr[i - input_pos] = curr->ptr[i];
+                            n->key[i - input_pos] = curr->key[i];
+                            n->size++;
+                            curr->ptr[i] = NULL;
+                            curr->key[i] = NULL;
+                            curr->size--;
+                        }
+
+                        curr->ptr[input_pos] = (uintptr_t)r;
+                        curr->key[input_pos] = r->num_of_votes;
+                        curr->size++;
+                    }
+
+
+
+                    Node* p = new Node();
+                    p->ptr[0] = (uintptr_t)curr;
+                    p->key[0] = n->key[0];
+                    p->ptr[1] = (uintptr_t)n;
+                    p->size++;
+
+                    root = p;
+                }
+            }
+            else
+            {
+                // searches through tree till it hit the leaf node w the key
+                searchForLeafNodeWithKey(&curr, r);
+
+                // no space in leaf node
+                if (curr->size >= N)
+                {
+                    // multiple iterations here if need update parent
+                    // TODO
+
+                }
+                else
+                {
+                    insertIntoLeaf(curr, r);
+                }
+            }
+
         }
     }
 
@@ -118,10 +269,13 @@ public:
         {
             for (int i = 0; i < N; i++)
             {
-                cout << n->key[i] << " ";
+                if(n->key[i] == 0)
+                    cout << "-\t ";
+                else
+                    cout << n->key[i] << "\t ";
             }
             cout << "\n";
-            if (!nodeIsLeaf(n))
+            if (!n->isLeaf)
             {
                 for (int i = 0; i < N + 1; i++)
                 {
@@ -129,21 +283,6 @@ public:
                 }
             }
         }
-    }
-
-    bool nodeIsLeaf(Node* n)
-    {
-        Node* addr = NULL;
-        for (int i = 0; i < num_of_leaf_nodes; i++)
-        {
-            addr = (first_leaf+i);
-            if (addr == n)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
 };
@@ -298,16 +437,43 @@ int main()
     r2.avg_rating = 2.7;
     r2.num_of_votes = 18;
 
+    Record r3;
+    r3.id = 214;
+    r3.avg_rating = 2.8;
+    r3.num_of_votes = 10;
+
+    Record r4;
+    r4.id = 13;
+    r4.avg_rating = 1.7;
+    r4.num_of_votes = 8;
+
+    Record r5;
+    r5.id = 2;
+    r5.avg_rating = 5.7;
+    r5.num_of_votes = 12;
+
+    Record r6;
+    r6.id = 2;
+    r6.avg_rating = 5.7;
+    r6.num_of_votes = 9;
+
+    Record r7(2,2.0,11);
+
     bpt.addRecord(&r);
     bpt.addRecord(&r2);
+    bpt.addRecord(&r3);
+    bpt.addRecord(&r4);
+    bpt.addRecord(&r5);
+    bpt.addRecord(&r6);
+    bpt.addRecord(&r7);
 
 
-    cout << bpt.getRecord(0)->id << endl;
-    cout << bpt.getRecord(0)->avg_rating << endl;
-    cout << bpt.getRecord(0)->num_of_votes << endl;
-    cout << bpt.getRecord(1)->id << endl;
-    cout << bpt.getRecord(1)->avg_rating << endl;
-    cout << bpt.getRecord(1)->num_of_votes << endl;
+    //cout << bpt.getRecord(0)->id << endl;
+    //cout << bpt.getRecord(0)->avg_rating << endl;
+    //cout << bpt.getRecord(0)->num_of_votes << endl;
+    //cout << bpt.getRecord(1)->id << endl;
+    //cout << bpt.getRecord(1)->avg_rating << endl;
+    //cout << bpt.getRecord(1)->num_of_votes << endl;
 
     bpt.displayTree(bpt.root);
 
