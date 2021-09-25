@@ -54,17 +54,8 @@ public:
 
     ~Node()
     {
-        delete[] ptr;
-        delete[] key;
-    }
-
-    bool isLeafNode()
-    {
-        // check if first ptr points to a Record
-        if (ptr[0])
-            return true;
-
-        return false;
+        //delete[] ptr;
+        //delete[] key;
     }
 };
 
@@ -73,17 +64,19 @@ class BPlusTree
 public:
 
     Node* root;
-    //Node* first_leaf;
+    Node* first_leaf;
+    int num_of_leaf_nodes;
 
     BPlusTree()
     {
         root = NULL;
-        //first_leaf = NULL;
+        first_leaf = NULL;
+        num_of_leaf_nodes = 0;
     }
 
     ~BPlusTree()
     {
-        delete root;
+        //delete root;
         //delete first_leaf;
     }
 
@@ -94,13 +87,12 @@ public:
 
     void addRecord(Record *r)
     {
-        // needs static if not node will be deleted
-        // however, not sure if node will be overwritten on subsequent calls
-        // instead of having a new instance created
-        Node* n = new Node();
         if (!root)
         {
+            Node* n = new Node();
             root = n;
+            first_leaf = n;
+            num_of_leaf_nodes = 1;
             n->ptr[0] = (uintptr_t )r;
         }
         else
@@ -119,6 +111,41 @@ public:
         }
 
         return reinterpret_cast<Record *>(root->ptr[key]);
+    }
+
+    void displayTree(Node* n)
+    {
+        // from https://www.programiz.com/dsa/b-plus-tree
+        if (n != NULL)
+        {
+            for (int i = 0; i < N; i++)
+            {
+                cout << n->key[i] << " ";
+            }
+            cout << "\n";
+            if (!nodeIsLeaf(n))
+            {
+                for (int i = 0; i < N + 1; i++)
+                {
+                    displayTree(reinterpret_cast<Node*>(n->ptr[i]));
+                }
+            }
+        }
+    }
+
+    bool nodeIsLeaf(Node* n)
+    {
+        Node* addr = NULL;
+        for (int i = 0; i < num_of_leaf_nodes; i++)
+        {
+            addr = (first_leaf+i);
+            if (addr == n)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 };
@@ -283,6 +310,8 @@ int main()
     cout << bpt.getRecord(1)->id << endl;
     cout << bpt.getRecord(1)->avg_rating << endl;
     cout << bpt.getRecord(1)->num_of_votes << endl;
+
+    bpt.displayTree(bpt.root);
 
     //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
     //{
