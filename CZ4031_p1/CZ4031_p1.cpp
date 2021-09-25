@@ -48,8 +48,8 @@ public:
 
     Node()
     {
-        ptr = new uintptr_t[N + 1]{0};
-        key = new int[N] {0};
+        ptr = new uintptr_t[N + 1]{NULL};
+        key = new int[N] {NULL};
     }
 
     ~Node()
@@ -97,11 +97,11 @@ public:
         // needs static if not node will be deleted
         // however, not sure if node will be overwritten on subsequent calls
         // instead of having a new instance created
-        static Node n;
+        Node* n = new Node();
         if (!root)
         {
-            root = &n;
-            n.ptr[0] = (uintptr_t )r;
+            root = n;
+            n->ptr[0] = (uintptr_t )r;
         }
         else
         {
@@ -274,15 +274,15 @@ int main()
     r2.num_of_votes = 18;
 
     bpt.addRecord(&r);
-    //bpt.addRecord(&r2);
+    bpt.addRecord(&r2);
 
 
     cout << bpt.getRecord(0)->id << endl;
     cout << bpt.getRecord(0)->avg_rating << endl;
     cout << bpt.getRecord(0)->num_of_votes << endl;
-    //cout << bpt.getRecord(1)->id << endl;
-    //cout << bpt.getRecord(1)->avg_rating << endl;
-    //cout << bpt.getRecord(1)->num_of_votes << endl;
+    cout << bpt.getRecord(1)->id << endl;
+    cout << bpt.getRecord(1)->avg_rating << endl;
+    cout << bpt.getRecord(1)->num_of_votes << endl;
 
     //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
     //{
