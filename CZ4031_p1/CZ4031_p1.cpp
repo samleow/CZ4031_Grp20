@@ -12,11 +12,9 @@ using namespace std;
 #define BLOCKS_IN_DISK      (DISK_SIZE/BLOCK_SIZE)
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
-
 #define POINTER_SIZE        sizeof(uintptr_t)//4
-#define N                   floor((BLOCK_SIZE-POINTER_SIZE)/(POINTER_SIZE+sizeof(int)))
-
 #define DATA_FILE           "dataTest.tsv"
+const static int N = floor((BLOCK_SIZE-POINTER_SIZE)/(POINTER_SIZE+sizeof(int)));
 
 struct Record
 {
@@ -100,7 +98,7 @@ public:
             root->ptr[1] = (uintptr_t)r;
         }
     }
-    
+
     Record* getRecord(int key)
     {
         // search from root
@@ -323,7 +321,7 @@ int main()
 
 #pragma endregion
 
-    
+
 #pragma region debugging Disk_block
 
     // for debugging
@@ -343,7 +341,7 @@ int main()
     //cout << endl;
 
 #pragma endregion
-    
+
 
     // deletes memory from pointer
     delete[] disk;
