@@ -14,7 +14,7 @@ using namespace std;
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
-const static int N = 4;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N = 6;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 
 struct Record
 {
@@ -94,9 +94,10 @@ public:
 
     void addNode(Node n)
     {
-
+        // TODO: not sure need or not
     }
 
+    // insert record into leaf node that has space
     void insertIntoLeaf(Node* n, Record* r)
     {
         bool is_set = false;
@@ -111,11 +112,14 @@ public:
                 //    n->key[j + 1] = n->key[j];
 
                 //}
+
+                // shifts all keys after i to the right
                 for(int j = N - 1; j > i; j--)
                 {
                     n->ptr[j] = n->ptr[j - 1];
                     n->key[j] = n->key[j - 1];
                 }
+                // sets i to record
                 n->ptr[i] = (uintptr_t)r;
                 n->key[i] = r->num_of_votes;
                 n->size++;
@@ -124,6 +128,7 @@ public:
             }
         }
 
+        // if record is bigger than the current last key
         if (!is_set)
         {
             n->ptr[n->size] = (uintptr_t)r;
@@ -132,13 +137,15 @@ public:
         }
     }
 
+    // searches through node recursively to get leaf node of record
     void searchForLeafNodeWithKey(Node** n, Record* r)
     {
+        // advances down all levels of tree
         while (!(*n)->isLeaf)
         {
             for (int i = 0; i < (*n)->size; i++)
             {
-                // in left ptr
+                // record under the left pointer of key
                 if (r->num_of_votes < (*n)->key[i])
                 {
                     (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
@@ -150,13 +157,18 @@ public:
                 break;
             else
             {
+                // record is larger than the last key
                 (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
             }
         }
     }
 
+    // adds a record into the B+ tree
+    // configured to use "num_of_votes" as key
     void addRecord(Record *r)
     {
+        // if there is no root
+        // i.e. tree is not built yet
         if (!root)
         {
             Node* n = new Node();
@@ -168,89 +180,127 @@ public:
         }
         else
         {
+            // initialise current node pointer to root of tree
             Node* curr = root;
-            if (curr->isLeaf)
+
+            // searches through tree till it hit the leaf node w the key
+            searchForLeafNodeWithKey(&curr, r);
+
+            // if leaf node have space
+            if (curr->size < N)
             {
-                if (curr->size < N)
+                // inserting a records into a leaf node with space
+                insertIntoLeaf(curr, r);
+            }
+            else
+            {
+                // creating a new leaf node and splitting records equally
+                Node* n = new Node();
+                curr->ptr[N] = (uintptr_t)n;
+                n->isLeaf = true;
+
+                // input position of the record into the current node
+                // initialised to -1 to check if record pos is at the end (largest key)
+                int input_pos = -1;
+                // get input position of record
+                for (int i = 0; i < N; i++)
                 {
-                    // inserting a records into a leaf node with space
-                    insertIntoLeaf(curr, r);
+                    if (curr->key[i] <= r->num_of_votes && r->num_of_votes < curr->key[i+1])
+                    {
+                        input_pos = i+1;
+                    }
                 }
+
+                // if record key is smallest key
+                if (r->num_of_votes < curr->key[0])
+                    input_pos = 0;
+
+                // if record key is largest key
+                if (input_pos == -1)
+                {
+                    // shift all keys after minimum num from current to new node
+                    for (int i = min_key_in_leaf; i < N; i++)
+                    {
+                        n->ptr[i - min_key_in_leaf] = curr->ptr[i];
+                        n->key[i - min_key_in_leaf] = curr->key[i];
+                        n->size++;
+                        curr->ptr[i] = NULL;
+                        curr->key[i] = NULL;
+                        curr->size--;
+                    }
+
+                    // set record into last key in new node
+                    n->ptr[n->size] = (uintptr_t)r;
+                    n->key[n->size] = r->num_of_votes;
+                    n->size++;
+                }
+                // if record is placed in between current keys and shifted
                 else
                 {
-                    Node* n = new Node();
-                    curr->ptr[N] = (uintptr_t)n;
-                    n->isLeaf = true;
-
-                    int input_pos = -1;
-                    for (int i = 0; i < N; i++)
+                    // if need shift current node's input position to new node
+                    if (input_pos >= min_key_in_leaf)
                     {
-                        if (curr->key[i] <= r->num_of_votes && r->num_of_votes < curr->key[i+1])
-                        {
-                            input_pos = i+1;
-                        }
-                    }
-
-                    if (input_pos == -1)
-                    {
+                        // shift all keys after minimum num from current to new node
                         for (int i = min_key_in_leaf; i < N; i++)
                         {
-                            n->ptr[i - min_key_in_leaf] = curr->ptr[i];
-                            n->key[i - min_key_in_leaf] = curr->key[i];
+                            // offset for keys after input position
+                            int o = 0;
+                            o = (i >= input_pos) ? 1 : 0;
+
+                            n->ptr[i - min_key_in_leaf + o] = curr->ptr[i];
+                            n->key[i - min_key_in_leaf + o] = curr->key[i];
                             n->size++;
                             curr->ptr[i] = NULL;
                             curr->key[i] = NULL;
                             curr->size--;
                         }
 
-                        n->ptr[min_key_in_leaf-1] = (uintptr_t)r;
-                        n->key[min_key_in_leaf-1] = r->num_of_votes;
+                        // set record into input position of new node
+                        n->ptr[N - input_pos - 1] = (uintptr_t)r;
+                        n->key[N - input_pos - 1] = r->num_of_votes;
                         n->size++;
                     }
+                    // if input position is to stay in current node
                     else
                     {
-                        for (int i = input_pos; i < N; i++)
+                        for (int i = N - 1; i >= input_pos; i--)
                         {
-                            n->ptr[i - input_pos] = curr->ptr[i];
-                            n->key[i - input_pos] = curr->key[i];
-                            n->size++;
-                            curr->ptr[i] = NULL;
-                            curr->key[i] = NULL;
-                            curr->size--;
+                            // if keys need to be shifted to new node
+                            if (i - (min_key_in_leaf - input_pos) >= 0)
+                            {
+                                n->ptr[i - (min_key_in_leaf - input_pos)] = curr->ptr[i];
+                                n->key[i - (min_key_in_leaf - input_pos)] = curr->key[i];
+                                n->size++;
+                                curr->ptr[i] = NULL;
+                                curr->key[i] = NULL;
+                                curr->size--;
+                            }
+                            // shift current node keys for record's new key position
+                            else
+                            {
+                                curr->ptr[i + 1] = curr->ptr[i];
+                                curr->key[i + 1] = curr->key[i];
+                            }
                         }
 
                         curr->ptr[input_pos] = (uintptr_t)r;
                         curr->key[input_pos] = r->num_of_votes;
                         curr->size++;
                     }
-
-
-
-                    Node* p = new Node();
-                    p->ptr[0] = (uintptr_t)curr;
-                    p->key[0] = n->key[0];
-                    p->ptr[1] = (uintptr_t)n;
-                    p->size++;
-
-                    root = p;
                 }
-            }
-            else
-            {
-                // searches through tree till it hit the leaf node w the key
-                searchForLeafNodeWithKey(&curr, r);
 
-                // no space in leaf node
-                if (curr->size >= N)
-                {
-                    // multiple iterations here if need update parent
-                    // TODO
+                // TODO: update parents and iterate through the top
+                // if parent node is full, need to split and update parent's parent and iterate to top
+                
 
-                }
-                else
-                {
-                    insertIntoLeaf(curr, r);
-                }
+
+                // current if leaf node have no parent, create parent and set as root
+                Node* p = new Node();
+                p->ptr[0] = (uintptr_t)curr;
+                p->key[0] = n->key[0];
+                p->ptr[1] = (uintptr_t)n;
+                p->size++;
+                root = p;
             }
 
         }
@@ -258,7 +308,7 @@ public:
 
     Record* getRecord(int key)
     {
-        // search from root
+        // TODO: search from root
 
         if (!root)
         {
@@ -292,22 +342,6 @@ public:
     }
 
 };
-
-// block_size = 100B / 500B
-// disk_size = 100 - 500MB(we can try getting user input to modify disk size, or fix it to a value)
-// blocks_in_disk = disk_size / block_size
-// num_of_records = number of lines in data.tsv – 1 (header)
-// record_size = sizeof(int) + sizeof(float) + sizeof(int)
-// records_per_block = (block_size – header_size) / record_size
-//
-// Block header : int block_id, int record_size(? May not need if all records have same size)
-//
-// For packing of fields into records, use “Fixed format with fixed length”(easier, but wastes memory)
-// For packing records into blocks, use unspanned.
-//
-// For saving to disk, we can try saving into a .dat file
-//
-// As for disk memory simulated on main memory (experiment 1), we can just save to stack
 
 int getTotalRecordCount() {
 
@@ -433,56 +467,7 @@ int main()
 
     BPlusTree bpt;
 
-    Record r;
-    r.id = 4;
-    r.avg_rating = 3.5;
-    r.num_of_votes = 6;
-
-    Record r2;
-    r2.id = 9;
-    r2.avg_rating = 2.7;
-    r2.num_of_votes = 18;
-
-    Record r3;
-    r3.id = 214;
-    r3.avg_rating = 2.8;
-    r3.num_of_votes = 10;
-
-    Record r4;
-    r4.id = 13;
-    r4.avg_rating = 1.7;
-    r4.num_of_votes = 8;
-
-    Record r5;
-    r5.id = 2;
-    r5.avg_rating = 5.7;
-    r5.num_of_votes = 12;
-
-    Record r6;
-    r6.id = 2;
-    r6.avg_rating = 5.7;
-    r6.num_of_votes = 9;
-
-    Record r7(2,2.0,11);
-
-    bpt.addRecord(&r);
-    bpt.addRecord(&r2);
-    bpt.addRecord(&r3);
-    bpt.addRecord(&r4);
-    bpt.addRecord(&r5);
-    bpt.addRecord(&r6);
-    bpt.addRecord(&r7);
-
-
-    //cout << bpt.getRecord(0)->id << endl;
-    //cout << bpt.getRecord(0)->avg_rating << endl;
-    //cout << bpt.getRecord(0)->num_of_votes << endl;
-    //cout << bpt.getRecord(1)->id << endl;
-    //cout << bpt.getRecord(1)->avg_rating << endl;
-    //cout << bpt.getRecord(1)->num_of_votes << endl;
-
-    bpt.displayTree(bpt.root);
-
+    // TODO: populate B+ tree with actual data
     //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
     //{
     //    for (int j = 0; j < RECORDS_PER_BLOCK; j++)
@@ -490,6 +475,30 @@ int main()
     //        //bpt.addRecord(disk[i].records[j]);
     //    }
     //}
+
+    // for testing/debugging
+    Record r1(4, 3.5, 6);
+    Record r2(9, 2.7, 18);
+    Record r3(214, 2.8, 10);
+    Record r4(13, 1.7, 8);
+    Record r5(2, 5.7, 12);
+    Record r6(8, 5.7, 9);
+    Record r7(7, 2.0, 5);
+    Record r8(1, 3.9, 8);
+    Record r9(214, 2.8, 15);
+
+    bpt.addRecord(&r1);
+    bpt.addRecord(&r2);
+    bpt.addRecord(&r3);
+    bpt.addRecord(&r4);
+    bpt.addRecord(&r5);
+    bpt.addRecord(&r6);
+    bpt.addRecord(&r7);
+    bpt.addRecord(&r8);
+    bpt.addRecord(&r9);
+
+    bpt.displayTree(bpt.root);
+
 
 #pragma endregion
 
