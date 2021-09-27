@@ -14,7 +14,7 @@ using namespace std;
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
-const static int N = 3;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N = 4;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 
 struct Record
 {
@@ -105,10 +105,16 @@ public:
         {
             if (r->num_of_votes < n->key[i])
             {
-                for (int j = i; j < N - 1; j++)
+                //for (int j = i; j < N - 1; j++)
+                //{
+                //    n->ptr[j + 1] = n->ptr[j];
+                //    n->key[j + 1] = n->key[j];
+
+                //}
+                for(int j = N - 1; j > i; j--)
                 {
-                    n->ptr[j + 1] = n->ptr[j];
-                    n->key[j + 1] = n->key[j];
+                    n->ptr[j] = n->ptr[j - 1];
+                    n->key[j] = n->key[j - 1];
                 }
                 n->ptr[i] = (uintptr_t)r;
                 n->key[i] = r->num_of_votes;
