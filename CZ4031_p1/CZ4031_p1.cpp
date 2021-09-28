@@ -17,6 +17,7 @@ using namespace std;
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
+// TODO: change back N
 const static int N = 6;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 
 struct Record
@@ -34,7 +35,7 @@ struct Record
     Record(int id, float avg_rating, int num_of_votes)
     {
         this->id = id;
-        this->avg_rating = avg_rating;// truncf(avg_rating * 10) / 10;
+        this->avg_rating = avg_rating;
         this->num_of_votes = num_of_votes;
     }
 
@@ -54,8 +55,7 @@ struct Record
 
 struct Disk_Block
 {
-    // header includes id and record length
-    // not sure if can omit header
+    // header includes id
     int id;
 
     Record records[RECORDS_PER_BLOCK];
@@ -78,9 +78,8 @@ public:
 
     ~Node()
     {
-        // TODO: fix delete
-        //delete[] ptr;
-        //delete[] key;
+        delete[] ptr;
+        delete[] key;
     }
 };
 
@@ -101,17 +100,11 @@ public:
 
     ~BPlusTree()
     {
-        // TODO: fix delete
-        //delete root;
+        delete root;
     }
 
-    void addNode(Node n)
-    {
-        // TODO: not sure need or not
-    }
-
-    // insert record into leaf node that has space
-    void insertIntoLeaf(Node* n, Record* r)
+    // insert record into leaf node that has space and returns input position
+    int insertIntoLeaf(Node* n, Record* r)
     {
         bool is_set = false;
 
@@ -137,7 +130,7 @@ public:
                 n->key[i] = r->num_of_votes;
                 n->size++;
                 is_set = true;
-                break;
+                return i;
             }
         }
 
@@ -148,6 +141,7 @@ public:
             n->key[n->size] = r->num_of_votes;
             n->size++;
         }
+        return n->size - 1;
     }
 
     // searches through node recursively to get leaf node of record
@@ -202,10 +196,54 @@ public:
         }
     }
 
+    // insert a child node into a parent node and returns input position
+    int insertChildNode(Node* p, Node* c, int key)
+    {
+        bool is_set = false;
+
+        for (int i = 0; i < p->size; i++)
+        {
+            if (key < p->key[i])
+            {
+                // shifts all keys after i to the right
+                for (int j = p->size; j > i; j--)
+                {
+                    p->ptr[j + 1] = p->ptr[j];
+                    p->key[j] = p->key[j - 1];
+                }
+                // sets i to child
+                p->ptr[i + 1] = (uintptr_t)c;
+                p->key[i] = key;
+                p->size++;
+                is_set = true;
+                return i;
+            }
+        }
+
+        // if child key is bigger than the last parent key
+        if (!is_set)
+        {
+            p->size++;
+            p->ptr[p->size] = (uintptr_t)c;
+            p->key[p->size-1] = key;
+        }
+        return p->size;
+    }
+
+    // splits the full node into two and create a slot for insertion
+    // returns the node to insert into and the input position
     tuple<Node*, int> splitFullNodeForInsert(Node* curr, Node* n, int key)
     {
+        // TODO: not sure if all nonleaf ptr need + 1 from key pos
+        // For nonleaf nodes might need to split based on child(ptr) key[0] instead of key
+        // as nonleaf nodes might update parent instead of itself when split
+        // Maybe can split this function into either for leaf or nonleaf nodes,
+        // instead of everything in one function
+
         int input_pos = -1;
-        // get input position of record
+        int is_nonleaf = !curr->isLeaf ? 1 : 0;
+        int min_key = curr->isLeaf ? min_key_in_leaf : min_key_in_nonleaf;
+        // get input position of key
         for (int i = 0; i < N; i++)
         {
             if (curr->key[i] <= key && key < curr->key[i + 1])
@@ -214,18 +252,18 @@ public:
             }
         }
 
-        // if record key is smallest key
+        // if input key is smallest key
         if (key < curr->key[0])
             input_pos = 0;
 
-        // if record key is largest key
+        // if input key is largest key
         if (input_pos == -1)
         {
             // shift all keys after minimum num from current to new node
-            for (int i = min_key_in_leaf; i < N; i++)
+            for (int i = min_key; i < N; i++)
             {
-                n->ptr[i - min_key_in_leaf] = curr->ptr[i];
-                n->key[i - min_key_in_leaf] = curr->key[i];
+                n->ptr[i - min_key] = curr->ptr[i];
+                n->key[i - min_key] = curr->key[i];
                 n->size++;
                 curr->ptr[i] = NULL;
                 curr->key[i] = NULL;
@@ -238,21 +276,21 @@ public:
             n->size++;*/
             return make_tuple(n, n->size);
         }
-        // if record is placed in between current keys and shifted
+        // if input key is placed in between current keys and shifted
         else
         {
             // if need shift current node's input position to new node
-            if (input_pos >= min_key_in_leaf)
+            if (input_pos >= min_key)
             {
                 // shift all keys after minimum num from current to new node
-                for (int i = min_key_in_leaf; i < N; i++)
+                for (int i = min_key; i < N; i++)
                 {
                     // offset for keys after input position
                     int o = 0;
                     o = (i >= input_pos) ? 1 : 0;
 
-                    n->ptr[i - min_key_in_leaf + o] = curr->ptr[i];
-                    n->key[i - min_key_in_leaf + o] = curr->key[i];
+                    n->ptr[i - min_key + o] = curr->ptr[i];
+                    n->key[i - min_key + o] = curr->key[i];
                     n->size++;
                     curr->ptr[i] = NULL;
                     curr->key[i] = NULL;
@@ -271,10 +309,10 @@ public:
                 for (int i = N - 1; i >= input_pos; i--)
                 {
                     // if keys need to be shifted to new node
-                    if (i - (min_key_in_leaf - input_pos) >= 0)
+                    if (min_key + 1 + i - N >= 0)
                     {
-                        n->ptr[i - (min_key_in_leaf - input_pos)] = curr->ptr[i];
-                        n->key[i - (min_key_in_leaf - input_pos)] = curr->key[i];
+                        n->ptr[min_key + 1 + i - N] = curr->ptr[i];
+                        n->key[min_key + 1 + i - N] = curr->key[i];
                         n->size++;
                         curr->ptr[i] = NULL;
                         curr->key[i] = NULL;
@@ -324,10 +362,13 @@ public:
             if (curr->size < N)
             {
                 // inserting a records into a leaf node with space
-                insertIntoLeaf(curr, r);
-
-                // TODO: need to update parent node if inserting on the first key
-
+                int input_pos = insertIntoLeaf(curr, r);
+                // if record is inserted into first key of leaf node
+                if (input_pos == 0)
+                {
+                    // TODO: need to update parent node if inserting on the first key
+                    // also may need to update further parent nodes
+                }
             }
             else
             {
@@ -359,7 +400,27 @@ public:
                     // TODO: update parents and iterate through the top
                     // if parent node is full, need to split and update parent's parent and iterate to top
 
+                    // this whole else statement might need to loop till parent is root
 
+                    Node* p = getParentNode(root, curr);
+                    if (!p)
+                    {
+                        cout << "ERROR : B+ Tree linkage problem! Child Node with first Key " << n->key[0] << " will not be inserted into the tree." << endl;
+                        return;
+                    }
+
+                    // if parent node still have space
+                    if (p->size < N)
+                    {
+                        // shift keys in parent node to insert key
+                        insertChildNode(p, n, n->key[0]);
+                    }
+                    else
+                    {
+                        // split parent nodes and shift keys
+                        // need to loop through parents till root
+
+                    }
                 }
             }
 
@@ -393,19 +454,19 @@ public:
 // TODO: remove references etc
 #pragma region Referenced from online
 
-    Node* getParentNode(Node* tree, Node* child) {
-        Node* parent;
-        if (tree->isLeaf || (reinterpret_cast<Node*>(tree->ptr[0]))->isLeaf) {
+    Node* getParentNode(Node* tree, Node* child)
+    {
+        Node* parent = NULL;
+        if (tree->isLeaf)
             return NULL;
-        }
-        for (int i = 0; i < tree->size; i++) {
+        for (int i = 0; i <= tree->size; i++) {
             if ((reinterpret_cast<Node*>(tree->ptr[i])) == child) {
                 parent = tree;
                 return parent;
             }
             else {
                 parent = getParentNode(reinterpret_cast<Node*>(tree->ptr[i]), child);
-                if (parent != NULL)
+                if (parent)
                     return parent;
             }
         }
@@ -417,6 +478,7 @@ public:
     {
         if (n != NULL)
         {
+            cout << "\t";
             for (int i = 0; i < N; i++)
             {
                 if(n->key[i] == 0)
@@ -424,11 +486,12 @@ public:
                 else
                     cout << n->key[i] << "\t ";
             }
-            cout << "\n";
+            cout << endl;
             if (!n->isLeaf)
             {
-                for (int i = 0; i < N + 1; i++)
+                for (int i = 0; i < n->size + 1; i++)
                 {
+                    cout << "c" << i << ":\n";
                     displayTree(reinterpret_cast<Node*>(n->ptr[i]));
                 }
             }
@@ -536,7 +599,7 @@ int main()
 
 #pragma region Experiment 1
 
-    cout << "\n\tExperiment 1:" << endl;
+    cout << "\n\tExperiment 1:" << endl << endl;
 
     BLOCKS_WITH_RECORDS = (int)ceil((float)TOTAL_RECORD_COUNT/(float)RECORDS_PER_BLOCK);
     cout << "Num of blocks utilized:\t" << BLOCKS_WITH_RECORDS << endl;
@@ -582,6 +645,11 @@ int main()
     Record r7(7, 2.0, 5);
     Record r8(1, 3.9, 8);
     Record r9(214, 2.8, 15);
+    Record r10(2, 5.7, 12);
+    Record r11(8, 5.7, 9);
+    Record r12(7, 2.0, 7);
+    Record r13(1, 3.9, 8);
+    Record r14(3, 3.3, 2);
 
     bpt.addRecord(&r1);
     bpt.addRecord(&r2);
@@ -592,13 +660,20 @@ int main()
     bpt.addRecord(&r7);
     bpt.addRecord(&r8);
     bpt.addRecord(&r9);
+    bpt.addRecord(&r10);
+    bpt.addRecord(&r11);
+    bpt.addRecord(&r12);
+    bpt.addRecord(&r13);
+    bpt.addRecord(&r14);
 
     bpt.displayTree(bpt.root);
 
     // testing retrieval of records based on key
     int k = 10;
-    cout << "Record w NumOfVotes == " << k << ": " << bpt.getRecord(k)->toString() << endl;
-
+    if(bpt.getRecord(k))
+        cout << "Record w NumOfVotes == " << k << ": " << bpt.getRecord(k)->toString() << endl;
+    else
+        cout << "Record w NumOfVotes == " << k << " cannot be found !" << endl;
 
 #pragma endregion
 
