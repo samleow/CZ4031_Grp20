@@ -2,8 +2,11 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <string>
 #include <math.h>
+#include <tuple>
 
 using namespace std;
 
@@ -31,7 +34,7 @@ struct Record
     Record(int id, float avg_rating, int num_of_votes)
     {
         this->id = id;
-        this->avg_rating = avg_rating;
+        this->avg_rating = avg_rating;// truncf(avg_rating * 10) / 10;
         this->num_of_votes = num_of_votes;
     }
 
@@ -39,6 +42,14 @@ struct Record
     {
         return sizeof(id) + sizeof(avg_rating) + sizeof(num_of_votes);
     }
+
+    string toString()
+    {
+        stringstream ss;
+        ss << fixed << setprecision(1) << "Record " << id << " :\t" << avg_rating << "\t| " << num_of_votes;
+        return ss.str();
+    }
+
 };
 
 struct Disk_Block
@@ -67,6 +78,7 @@ public:
 
     ~Node()
     {
+        // TODO: fix delete
         //delete[] ptr;
         //delete[] key;
     }
@@ -89,6 +101,7 @@ public:
 
     ~BPlusTree()
     {
+        // TODO: fix delete
         //delete root;
     }
 
@@ -138,7 +151,7 @@ public:
     }
 
     // searches through node recursively to get leaf node of record
-    void searchForLeafNodeWithKey(Node** n, Record* r)
+    void searchForLeafNodeWithRecord(Node** n, Record* r)
     {
         // advances down all levels of tree
         while (!(*n)->isLeaf)
@@ -159,6 +172,127 @@ public:
             {
                 // record is larger than the last key
                 (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
+            }
+        }
+    }
+
+    // searches through node recursively to get leaf node of record
+    void searchForLeafNodeWithKey(Node** n, int key)
+    {
+        // advances down all levels of tree
+        while (!(*n)->isLeaf)
+        {
+            for (int i = 0; i < (*n)->size; i++)
+            {
+                // record under the left pointer of key
+                if (key < (*n)->key[i])
+                {
+                    (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
+                    break;
+                }
+            }
+
+            if ((*n)->isLeaf)
+                break;
+            else
+            {
+                // record is larger than the last key
+                (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
+            }
+        }
+    }
+
+    tuple<Node*, int> splitFullNodeForInsert(Node* curr, Node* n, int key)
+    {
+        int input_pos = -1;
+        // get input position of record
+        for (int i = 0; i < N; i++)
+        {
+            if (curr->key[i] <= key && key < curr->key[i + 1])
+            {
+                input_pos = i + 1;
+            }
+        }
+
+        // if record key is smallest key
+        if (key < curr->key[0])
+            input_pos = 0;
+
+        // if record key is largest key
+        if (input_pos == -1)
+        {
+            // shift all keys after minimum num from current to new node
+            for (int i = min_key_in_leaf; i < N; i++)
+            {
+                n->ptr[i - min_key_in_leaf] = curr->ptr[i];
+                n->key[i - min_key_in_leaf] = curr->key[i];
+                n->size++;
+                curr->ptr[i] = NULL;
+                curr->key[i] = NULL;
+                curr->size--;
+            }
+
+            // set record into last key in new node
+            /*n->ptr[n->size] = (uintptr_t)r;
+            n->key[n->size] = r->num_of_votes;
+            n->size++;*/
+            return make_tuple(n, n->size);
+        }
+        // if record is placed in between current keys and shifted
+        else
+        {
+            // if need shift current node's input position to new node
+            if (input_pos >= min_key_in_leaf)
+            {
+                // shift all keys after minimum num from current to new node
+                for (int i = min_key_in_leaf; i < N; i++)
+                {
+                    // offset for keys after input position
+                    int o = 0;
+                    o = (i >= input_pos) ? 1 : 0;
+
+                    n->ptr[i - min_key_in_leaf + o] = curr->ptr[i];
+                    n->key[i - min_key_in_leaf + o] = curr->key[i];
+                    n->size++;
+                    curr->ptr[i] = NULL;
+                    curr->key[i] = NULL;
+                    curr->size--;
+                }
+
+                // set record into input position of new node
+                /*n->ptr[N - input_pos - 1] = (uintptr_t)r;
+                n->key[N - input_pos - 1] = r->num_of_votes;
+                n->size++;*/
+                return make_tuple(n, N - input_pos - 1);
+            }
+            // if input position is to stay in current node
+            else
+            {
+                for (int i = N - 1; i >= input_pos; i--)
+                {
+                    // if keys need to be shifted to new node
+                    if (i - (min_key_in_leaf - input_pos) >= 0)
+                    {
+                        n->ptr[i - (min_key_in_leaf - input_pos)] = curr->ptr[i];
+                        n->key[i - (min_key_in_leaf - input_pos)] = curr->key[i];
+                        n->size++;
+                        curr->ptr[i] = NULL;
+                        curr->key[i] = NULL;
+                        curr->size--;
+                    }
+                    // shift current node keys for record's new key position
+                    else
+                    {
+                        curr->ptr[i + 1] = curr->ptr[i];
+                        curr->key[i + 1] = curr->key[i];
+                    }
+                }
+
+                // set record into input position of current node
+                /*curr->ptr[input_pos] = (uintptr_t)r;
+                curr->key[input_pos] = r->num_of_votes;
+                curr->size++;*/
+                return make_tuple(curr, input_pos);
             }
         }
     }
@@ -184,13 +318,16 @@ public:
             Node* curr = root;
 
             // searches through tree till it hit the leaf node w the key
-            searchForLeafNodeWithKey(&curr, r);
+            searchForLeafNodeWithRecord(&curr, r);
 
             // if leaf node have space
             if (curr->size < N)
             {
                 // inserting a records into a leaf node with space
                 insertIntoLeaf(curr, r);
+
+                // TODO: need to update parent node if inserting on the first key
+
             }
             else
             {
@@ -199,128 +336,85 @@ public:
                 curr->ptr[N] = (uintptr_t)n;
                 n->isLeaf = true;
 
-                // input position of the record into the current node
-                // initialised to -1 to check if record pos is at the end (largest key)
-                int input_pos = -1;
-                // get input position of record
-                for (int i = 0; i < N; i++)
+                Node* t; int input_pos;
+                // split full node equally between curr and n nodes
+                tie(t, input_pos) = splitFullNodeForInsert(curr, n, r->num_of_votes);
+                // sets record into input position
+                t->ptr[input_pos] = (uintptr_t)r;
+                t->key[input_pos] = r->num_of_votes;
+                t->size++;
+
+                // if current leaf node have no parent, create parent and set as root
+                if (curr == root)
                 {
-                    if (curr->key[i] <= r->num_of_votes && r->num_of_votes < curr->key[i+1])
-                    {
-                        input_pos = i+1;
-                    }
+                    Node* p = new Node();
+                    p->ptr[0] = (uintptr_t)curr;
+                    p->key[0] = n->key[0];
+                    p->ptr[1] = (uintptr_t)n;
+                    p->size++;
+                    root = p;
                 }
-
-                // if record key is smallest key
-                if (r->num_of_votes < curr->key[0])
-                    input_pos = 0;
-
-                // if record key is largest key
-                if (input_pos == -1)
-                {
-                    // shift all keys after minimum num from current to new node
-                    for (int i = min_key_in_leaf; i < N; i++)
-                    {
-                        n->ptr[i - min_key_in_leaf] = curr->ptr[i];
-                        n->key[i - min_key_in_leaf] = curr->key[i];
-                        n->size++;
-                        curr->ptr[i] = NULL;
-                        curr->key[i] = NULL;
-                        curr->size--;
-                    }
-
-                    // set record into last key in new node
-                    n->ptr[n->size] = (uintptr_t)r;
-                    n->key[n->size] = r->num_of_votes;
-                    n->size++;
-                }
-                // if record is placed in between current keys and shifted
                 else
                 {
-                    // if need shift current node's input position to new node
-                    if (input_pos >= min_key_in_leaf)
-                    {
-                        // shift all keys after minimum num from current to new node
-                        for (int i = min_key_in_leaf; i < N; i++)
-                        {
-                            // offset for keys after input position
-                            int o = 0;
-                            o = (i >= input_pos) ? 1 : 0;
+                    // TODO: update parents and iterate through the top
+                    // if parent node is full, need to split and update parent's parent and iterate to top
 
-                            n->ptr[i - min_key_in_leaf + o] = curr->ptr[i];
-                            n->key[i - min_key_in_leaf + o] = curr->key[i];
-                            n->size++;
-                            curr->ptr[i] = NULL;
-                            curr->key[i] = NULL;
-                            curr->size--;
-                        }
 
-                        // set record into input position of new node
-                        n->ptr[N - input_pos - 1] = (uintptr_t)r;
-                        n->key[N - input_pos - 1] = r->num_of_votes;
-                        n->size++;
-                    }
-                    // if input position is to stay in current node
-                    else
-                    {
-                        for (int i = N - 1; i >= input_pos; i--)
-                        {
-                            // if keys need to be shifted to new node
-                            if (i - (min_key_in_leaf - input_pos) >= 0)
-                            {
-                                n->ptr[i - (min_key_in_leaf - input_pos)] = curr->ptr[i];
-                                n->key[i - (min_key_in_leaf - input_pos)] = curr->key[i];
-                                n->size++;
-                                curr->ptr[i] = NULL;
-                                curr->key[i] = NULL;
-                                curr->size--;
-                            }
-                            // shift current node keys for record's new key position
-                            else
-                            {
-                                curr->ptr[i + 1] = curr->ptr[i];
-                                curr->key[i + 1] = curr->key[i];
-                            }
-                        }
-
-                        curr->ptr[input_pos] = (uintptr_t)r;
-                        curr->key[input_pos] = r->num_of_votes;
-                        curr->size++;
-                    }
                 }
-
-                // TODO: update parents and iterate through the top
-                // if parent node is full, need to split and update parent's parent and iterate to top
-                
-
-
-                // current if leaf node have no parent, create parent and set as root
-                Node* p = new Node();
-                p->ptr[0] = (uintptr_t)curr;
-                p->key[0] = n->key[0];
-                p->ptr[1] = (uintptr_t)n;
-                p->size++;
-                root = p;
             }
 
         }
     }
 
+    // get the first record with given key
     Record* getRecord(int key)
     {
-        // TODO: search from root
+        // TODO: test
 
         if (!root)
-        {
             return NULL;
+
+        Node* curr = root;
+        searchForLeafNodeWithKey(&curr, key);
+
+        /*if (!curr)
+            return NULL;*/
+
+        for (int i = 0; i < curr->size; i++)
+        {
+            // returns record if key match
+            if (key == curr->key[i])
+                return reinterpret_cast<Record*>(curr->ptr[i]);
         }
 
-        return reinterpret_cast<Record *>(root->ptr[key]);
+        return NULL;
     }
 
+// TODO: remove references etc
+#pragma region Referenced from online
+
+    Node* getParentNode(Node* tree, Node* child) {
+        Node* parent;
+        if (tree->isLeaf || (reinterpret_cast<Node*>(tree->ptr[0]))->isLeaf) {
+            return NULL;
+        }
+        for (int i = 0; i < tree->size; i++) {
+            if ((reinterpret_cast<Node*>(tree->ptr[i])) == child) {
+                parent = tree;
+                return parent;
+            }
+            else {
+                parent = getParentNode(reinterpret_cast<Node*>(tree->ptr[i]), child);
+                if (parent != NULL)
+                    return parent;
+            }
+        }
+        return parent;
+    }
+
+    // from https://www.programiz.com/dsa/b-plus-tree
     void displayTree(Node* n)
     {
-        // from https://www.programiz.com/dsa/b-plus-tree
         if (n != NULL)
         {
             for (int i = 0; i < N; i++)
@@ -340,6 +434,8 @@ public:
             }
         }
     }
+
+#pragma endregion
 
 };
 
@@ -498,6 +594,10 @@ int main()
     bpt.addRecord(&r9);
 
     bpt.displayTree(bpt.root);
+
+    // testing retrieval of records based on key
+    int k = 10;
+    cout << "Record w NumOfVotes == " << k << ": " << bpt.getRecord(k)->toString() << endl;
 
 
 #pragma endregion
