@@ -18,7 +18,7 @@ using namespace std;
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
-const static int N = 6;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N = 5;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 
 struct Record
 {
@@ -301,7 +301,9 @@ public:
                 /*n->ptr[N - input_pos - 1] = (uintptr_t)r;
                 n->key[N - input_pos - 1] = r->num_of_votes;
                 n->size++;*/
-                return make_tuple(n, N - input_pos - 1);
+
+                //cout << "New node input pos: " << input_pos + n->size - N << endl;
+                return make_tuple(n, input_pos + n->size - N);// N - input_pos - 1);
             }
             // if input position is to stay in current node
             else
@@ -309,10 +311,11 @@ public:
                 for (int i = N - 1; i >= input_pos; i--)
                 {
                     // if keys need to be shifted to new node
-                    if (min_key + 1 + i - N >= 0)
+                    if (min_key + i - N >= 0)
                     {
-                        n->ptr[min_key + 1 + i - N] = curr->ptr[i];
-                        n->key[min_key + 1 + i - N] = curr->key[i];
+                        //cout << "Shifting " << curr->key[i] << " from curr " << i << " to new " << min_key + i - N << endl;
+                        n->ptr[min_key + i - N] = curr->ptr[i];
+                        n->key[min_key + i - N] = curr->key[i];
                         n->size++;
                         curr->ptr[i] = NULL;
                         curr->key[i] = NULL;
@@ -648,8 +651,8 @@ int main()
     Record r10(2, 5.7, 12);
     Record r11(8, 5.7, 9);
     Record r12(7, 2.0, 7);
-    Record r13(1, 3.9, 8);
-    Record r14(3, 3.3, 2);
+    Record r13(6, 3.9, 2);
+    Record r14(3, 3.3, 8);
 
     bpt.addRecord(&r1);
     bpt.addRecord(&r2);
