@@ -18,7 +18,7 @@ using namespace std;
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
-const static int N = 5;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N = 4;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 
 struct Record
 {
@@ -83,6 +83,9 @@ public:
     }
 };
 
+// TODO: create a class/struct for an overflow block that stores pointers to records of the same key,
+// and the last pointer pointing to another overflow block if first block overflows (single linked list method)
+
 class BPlusTree
 {
 public:
@@ -106,6 +109,8 @@ public:
     // insert record into leaf node that has space and returns input position
     int insertIntoLeaf(Node* n, Record* r)
     {
+        // TODO: change the storage of records into storage of overflow blocks holding records
+
         bool is_set = false;
 
         for (int i = 0; i < n->size; i++)
@@ -302,20 +307,27 @@ public:
                 n->key[N - input_pos - 1] = r->num_of_votes;
                 n->size++;*/
 
+                //cout << "Insert key: " << key << endl;
                 //cout << "New node input pos: " << input_pos + n->size - N << endl;
                 return make_tuple(n, input_pos + n->size - N);// N - input_pos - 1);
             }
             // if input position is to stay in current node
             else
             {
+                cout << "Insert key: " << key << endl;
+                cout << "Input pos: " << input_pos << endl;
                 for (int i = N - 1; i >= input_pos; i--)
                 {
                     // if keys need to be shifted to new node
-                    if (min_key + i - N >= 0)
+                    // how I got (i - min_key + 1):
+                    // n pos starts from the rightmost shift key
+                    // n->ptr[i + shift_amount(N - min_key + 1) - N]
+                    // where i is iterator moving left, shift_amount is the amount to shift right and N being the size of the node
+                    if (i - min_key + 1 >= 0)
                     {
-                        //cout << "Shifting " << curr->key[i] << " from curr " << i << " to new " << min_key + i - N << endl;
-                        n->ptr[min_key + i - N] = curr->ptr[i];
-                        n->key[min_key + i - N] = curr->key[i];
+                        cout << "Shifting " << curr->key[i] << " from curr " << i << " to new " << i - min_key + 1 << endl;
+                        n->ptr[i - min_key + 1] = curr->ptr[i];
+                        n->key[i - min_key + 1] = curr->key[i];
                         n->size++;
                         curr->ptr[i] = NULL;
                         curr->key[i] = NULL;
@@ -346,6 +358,7 @@ public:
         // i.e. tree is not built yet
         if (!root)
         {
+            // TODO: change to overflow block instead of record
             Node* n = new Node();
             root = n;
             n->isLeaf = true;
@@ -380,6 +393,7 @@ public:
                 curr->ptr[N] = (uintptr_t)n;
                 n->isLeaf = true;
 
+                // TODO: change to overflow block instead of record
                 Node* t; int input_pos;
                 // split full node equally between curr and n nodes
                 tie(t, input_pos) = splitFullNodeForInsert(curr, n, r->num_of_votes);
@@ -433,7 +447,7 @@ public:
     // get the first record with given key
     Record* getRecord(int key)
     {
-        // TODO: test
+        // TODO: need to implement retrieval of all records in overflow block of key
 
         if (!root)
             return NULL;
@@ -448,6 +462,8 @@ public:
         {
             // returns record if key match
             if (key == curr->key[i])
+                // TODO: change this from returning a Record to return an overflow block with all records inside
+                // overflow block should be a block that works like a single linked list
                 return reinterpret_cast<Record*>(curr->ptr[i]);
         }
 
@@ -639,20 +655,22 @@ int main()
     //}
 
     // for testing/debugging
-    Record r1(4, 3.5, 6);
-    Record r2(9, 2.7, 18);
-    Record r3(214, 2.8, 10);
-    Record r4(13, 1.7, 8);
-    Record r5(2, 5.7, 12);
+    Record r1(4, 3.5, 1);
+    Record r2(9, 2.7, 2);
+    Record r3(214, 2.8, 5);
+    Record r4(13, 1.7, 4);
+    Record r5(2, 5.7, 3);
     Record r6(8, 5.7, 9);
-    Record r7(7, 2.0, 5);
-    Record r8(1, 3.9, 8);
-    Record r9(214, 2.8, 15);
-    Record r10(2, 5.7, 12);
-    Record r11(8, 5.7, 9);
+    Record r7(7, 2.0, 12);
+    Record r8(1, 3.9, 18);
+    Record r9(214, 2.8, 6);
+    Record r10(2, 5.7, 20);
+    Record r11(8, 5.7, 8);
     Record r12(7, 2.0, 7);
-    Record r13(6, 3.9, 2);
-    Record r14(3, 3.3, 8);
+    Record r13(6, 3.9, 11);
+    Record r14(3, 3.3, 10);
+    Record r15(13, 1.3, 15);
+    Record r16(21, 2.7, 14);
 
     bpt.addRecord(&r1);
     bpt.addRecord(&r2);
@@ -668,6 +686,8 @@ int main()
     bpt.addRecord(&r12);
     bpt.addRecord(&r13);
     bpt.addRecord(&r14);
+    bpt.addRecord(&r15);/**/
+    //bpt.addRecord(&r16);
 
     bpt.displayTree(bpt.root);
 
