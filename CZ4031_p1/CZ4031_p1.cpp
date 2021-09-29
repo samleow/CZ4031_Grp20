@@ -19,7 +19,7 @@ using namespace std;
 #define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
 const static int N = 4;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
-#define BLOCK_SIZE_FOR_KEY  BLOCK_SIZE-sizeof(int)
+#define RECORDS_PER_BUCKET  ((BLOCK_SIZE-(2*sizeof(int)))/sizeof(uintptr_t))
 
 struct Record
 {
@@ -86,25 +86,24 @@ public:
 
 // TODO: create a class/struct for an overflow block that stores pointers to records of the same key,
 // and the last pointer pointing to another overflow block if first block overflows (single linked list method)
-class Key
+class Bucket
 {
 public:
     uintptr_t* ptr;
-    int* key;
+    int key;
+    int size;
 
-    Key()
+    Bucket()
     {
-        ptr = new uintptr_t[BLOCK_SIZE_FOR_KEY + 1]{NULL};
-        key = new int[BLOCK_SIZE_FOR_KEY] {NULL};
-        int keySize = 0;
+        ptr = new uintptr_t[RECORDS_PER_BUCKET] {NULL};
+        key = -1;
+        size = 0;
     }
 
-
-    ~Key()
-        {
-            delete[] ptr;
-            delete[] key;
-        }
+    ~Bucket()
+    {
+        delete[] ptr;
+    }
 };
 
 class BPlusTree
