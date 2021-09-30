@@ -17,7 +17,7 @@ using namespace std;
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
-const static int N =        3;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
 
 struct Record
@@ -511,17 +511,17 @@ public:
                     // where i is iterator moving left, shift_amount is the amount to shift right and N being the size of the node
                     if (i - (N - min_key_in_nonleaf) + 1 >= 0)
                     {
-                        n->ptr[i - (N - min_key_in_nonleaf) + 1] = curr->ptr[i];
+                        n->ptr[i - (N - min_key_in_nonleaf) + 2] = curr->ptr[i+1];
                         n->key[i - (N - min_key_in_nonleaf) + 1] = curr->key[i];
                         n->size++;
-                        curr->ptr[i] = NULL;
+                        curr->ptr[i+1] = NULL;
                         curr->key[i] = NULL;
                         curr->size--;
                     }
                     // shift current node keys for record's new key position
                     else
                     {
-                        curr->ptr[i + 1] = curr->ptr[i];
+                        curr->ptr[i + 2] = curr->ptr[i+1];
                         curr->key[i + 1] = curr->key[i];
                     }
                 }
@@ -883,17 +883,17 @@ int main()
     BPlusTree bpt;
 
     // TODO: populate B+ tree with actual data
-    //for (int i = 0; i < 30/*BLOCKS_WITH_RECORDS*/; i++)
-    //{
-    //    for (int j = 0; j < disk[i].size; j++)
-    //    {
-    //        cout << "Record - " << disk[i].records[j].toString() << endl;
-    //        bpt.addRecord(&(disk[i].records[j]));
-    //    }
-    //}
+    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+    {
+        for (int j = 0; j < disk[i].size; j++)
+        {
+            cout << "Record - " << disk[i].records[j].toString() << endl;
+            bpt.addRecord(&(disk[i].records[j]));
+        }
+    }
 
     // for testing/debugging
-    Record r1(4, 3.5, 1);
+    /*Record r1(4, 3.5, 1);
     Record r2(9, 2.7, 2);
     Record r3(214, 2.8, 5);
     Record r4(13, 1.7, 4);
@@ -903,10 +903,10 @@ int main()
     Record r8(1, 3.9, 18);
     Record r9(214, 2.8, 6);
     Record r10(2, 5.7, 20);
-    Record r11(8, 5.7, 8);  // prob
+    Record r11(8, 5.7, 8);
     Record r12(7, 2.0, 7);
     Record r13(6, 3.9, 11);
-    Record r14(3, 3.3, 10); // prob
+    Record r14(3, 3.3, 10);
     Record r15(13, 1.3, 15);
     Record r16(21, 2.7, 21);
     Record r17(8, 5.7, 30);
@@ -927,11 +927,11 @@ int main()
     bpt.addRecord(&r8);
     bpt.addRecord(&r9);
     bpt.addRecord(&r10);
-    bpt.addRecord(&r11);    // prob
-    /*bpt.addRecord(&r12);
-    bpt.addRecord(&r13); */
-    //bpt.addRecord(&r14); // prob
-    /*bpt.addRecord(&r15);
+    bpt.addRecord(&r11);
+    bpt.addRecord(&r12);
+    bpt.addRecord(&r13); 
+    bpt.addRecord(&r14);
+    bpt.addRecord(&r15);
     bpt.addRecord(&r16);
     bpt.addRecord(&r17);
     bpt.addRecord(&r18);
