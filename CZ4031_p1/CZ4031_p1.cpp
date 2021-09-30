@@ -677,9 +677,6 @@ public:
                         return;
                     }
 
-                    if (!n)
-                        cout << "ISNULL" << endl;
-
                     insertParentUpdate(p, n, n->key[0]);
 
                 }
@@ -907,7 +904,7 @@ int main()
     Record r8(1, 3.9, 18);
     Record r9(214, 2.8, 6);
     Record r10(2, 5.7, 20);
-    Record r11(8, 5.7, 8);
+    Record r11(8, 5.7, 8);  // prob
     Record r12(7, 2.0, 7);
     Record r13(6, 3.9, 11);
     Record r14(3, 3.3, 10); // prob
@@ -931,9 +928,9 @@ int main()
     bpt.addRecord(&r8);
     bpt.addRecord(&r9);
     bpt.addRecord(&r10);
-    bpt.addRecord(&r11);
-    bpt.addRecord(&r12);
-    bpt.addRecord(&r13);
+    bpt.addRecord(&r11);    // prob
+    /*bpt.addRecord(&r12);
+    bpt.addRecord(&r13); */
     //bpt.addRecord(&r14); // prob
     /*bpt.addRecord(&r15);
     bpt.addRecord(&r16);
