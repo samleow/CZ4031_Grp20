@@ -17,7 +17,7 @@ using namespace std;
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
-const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N =        2;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
 
 struct Record
@@ -869,8 +869,6 @@ int main()
     // disk memory, containing all data blocks
     Disk_Block* disk;
 
-    // for now just 9 blocks, coz stack mem not enough for all 1mil r
-    //Disk_Block Disk[BLOCKS_IN_DISK];
     disk = new Disk_Block[BLOCKS_WITH_RECORDS];
     retrieveData(disk, BLOCKS_WITH_RECORDS);
 
@@ -886,14 +884,14 @@ int main()
     BPlusTree bpt;
 
     // TODO: populate B+ tree with actual data
-    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)//BLOCKS_WITH_RECORDS; i++)
-    {
-        for (int j = 0; j < disk[i].size; j++)
-        {
-            cout << "Record - " << disk[i].records[j].toString() << endl;
-            bpt.addRecord(&(disk[i].records[j]));
-        }
-    }
+    //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)//BLOCKS_WITH_RECORDS; i++)
+    //{
+    //    for (int j = 0; j < disk[i].size; j++)
+    //    {
+    //        cout << "Record - " << disk[i].records[j].toString() << endl;
+    //        bpt.addRecord(&(disk[i].records[j]));
+    //    }
+    //}
 
     // for testing/debugging
     /*Record r1(4, 3.5, 1);
@@ -943,6 +941,28 @@ int main()
     bpt.addRecord(&r21);
     bpt.addRecord(&r22);
     bpt.addRecord(&r23);*/
+
+    Record r1(4, 3.5, 10);
+    Record r2(9, 2.7, 20);
+    Record r3(214, 2.8, 30);
+    Record r4(13, 1.7, 40);
+    Record r5(2, 5.7, 50);
+    Record r6(8, 5.7, 60);
+    Record r7(7, 2.0, 70);
+    Record r8(1, 3.9, 80);
+    Record r9(214, 2.8, 90);
+    Record r10(23, 2.2, 100);
+
+    bpt.addRecord(&r1);
+    bpt.addRecord(&r2);
+    bpt.addRecord(&r3);
+    bpt.addRecord(&r4);
+    bpt.addRecord(&r5);
+    bpt.addRecord(&r6);
+    bpt.addRecord(&r7);
+    bpt.addRecord(&r8);
+    bpt.addRecord(&r9);
+    //bpt.addRecord(&r10);
 
     bpt.displayTree(bpt.root);
 
