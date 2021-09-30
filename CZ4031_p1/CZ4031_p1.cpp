@@ -79,8 +79,9 @@ public:
 
     ~Node()
     {
-        delete[] ptr;
-        delete[] key;
+        // TODO: fix delete
+        //delete[] ptr;
+        //delete[] key;
     }
 };
 
@@ -112,7 +113,8 @@ public:
 
     ~Bucket()
     {
-        delete[] ptr;
+        // TODO: fix delete
+        //delete[] ptr;
     }
 };
 
@@ -137,7 +139,8 @@ public:
 
     ~BPlusTree()
     {
-        delete root;
+        // TODO: fix delete
+        //delete root;
     }
 
     // insert record into existing bucket with pos in leaf node
@@ -464,10 +467,10 @@ public:
                     // compare with insertion if is greater than or lesser than
                     o = (i >= input_pos) ? 1 : 0;
 
-                    n->ptr[i - (N - min_key_in_nonleaf) + o] = curr->ptr[i];
+                    n->ptr[i - (N - min_key_in_nonleaf) + o+1] = curr->ptr[i+1];
                     n->key[i - (N - min_key_in_nonleaf) + o] = curr->key[i];
                     n->size++;
-                    curr->ptr[i] = NULL;
+                    curr->ptr[i+1] = NULL;
                     curr->key[i] = NULL;
                     curr->size--;
                 }
@@ -883,7 +886,7 @@ int main()
     BPlusTree bpt;
 
     // TODO: populate B+ tree with actual data
-    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)//BLOCKS_WITH_RECORDS; i++)
     {
         for (int j = 0; j < disk[i].size; j++)
         {
