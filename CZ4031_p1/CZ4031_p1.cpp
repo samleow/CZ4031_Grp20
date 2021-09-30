@@ -139,6 +139,34 @@ public:
         delete root;
     }
 
+    // insert record into existing bucket with pos in leaf node
+    void insertIntoBucket(Node* n, int pos, Record* r)
+    {
+        Bucket* b = reinterpret_cast<Bucket*>(n->ptr[pos]);
+        while (b->overflowed)
+        {
+            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+        }
+
+        // check if bucket is not full
+        if (b->size < RECORDS_PER_BUCKET)
+        {
+            b->ptr[b->size] = (uintptr_t)r;
+            b->size++;
+        }
+        else
+        {
+            // create new overflow bucket
+            Bucket* nb = new Bucket(r->num_of_votes);
+            nb->ptr[0] = (uintptr_t)r;
+            nb->size++;
+
+            b->ptr[RECORDS_PER_BUCKET] = (uintptr_t)nb;
+            b->overflowed = true;
+        }
+
+    }
+
     // insert record into leaf node that has space and returns input position
     int insertIntoLeaf(Node* n, Record* r)
     {
@@ -150,29 +178,7 @@ public:
         {
             if (r->num_of_votes == n->key[i])
             {
-                Bucket* b = reinterpret_cast<Bucket*>(n->ptr[i]);
-                while (b->overflowed)
-                {
-                    b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
-                }
-
-                // check if bucket is not full
-                if (b->size < RECORDS_PER_BUCKET)
-                {
-                    b->ptr[b->size + 1] = (uintptr_t)r;
-                    b->size++;
-                }
-                else
-                {
-                    // create new overflow bucket
-                    Bucket* nb = new Bucket(r->num_of_votes);
-                    nb->ptr[0] = (uintptr_t)r;
-                    nb->size++;
-
-                    b->ptr[RECORDS_PER_BUCKET] = (uintptr_t)nb;
-                    b->overflowed = true;
-                }
-
+                insertIntoBucket(n, i, r);
                 return i;
             }
             else if (r->num_of_votes < n->key[i])
@@ -218,6 +224,7 @@ public:
     void searchForLeafNodeWithKey(Node** n, int key)
     {
         // advances down all levels of tree
+        // TODO: try find alternative to goto
         loop:
         while (!(*n)->isLeaf)
         {
@@ -227,7 +234,6 @@ public:
                 if (key < (*n)->key[i])
                 {
                     (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
-                    // TODO: try find alternative to goto
                     goto loop;
                     //break;
                 }
@@ -610,12 +616,23 @@ public:
             // searches through tree till it hit the leaf node w the key
             searchForLeafNodeWithKey(&curr, r->num_of_votes);
 
-            // if leaf node have space
-            if (curr->size < N)
+            int key_pos = -1;
+            for (int i = 0; i < curr->size; i++)
             {
-                // inserting a records into a leaf node with space
-                int input_pos = insertIntoLeaf(curr, r);
+                if (curr->key[i] == r->num_of_votes)
+                {
+                    key_pos = i;
+                    break;
+                }
             }
+
+            // if key already exists in tree
+            if (key_pos != -1)
+                insertIntoBucket(curr, key_pos, r);
+            // if leaf node have space
+            else if (curr->size < N)
+                // inserting a record into a leaf node with space
+                insertIntoLeaf(curr, r);
             else
             {
                 // creating a new leaf node and splitting records equally
@@ -895,6 +912,7 @@ int main()
     Record r20(3, 3.3, 80);
     Record r21(13, 1.3, 90);
     Record r22(21, 2.7, 100);
+    Record r23(35, 4.2, 100);
 
     bpt.addRecord(&r1);
     bpt.addRecord(&r2);
@@ -917,15 +935,32 @@ int main()
     bpt.addRecord(&r19);
     bpt.addRecord(&r20);
     bpt.addRecord(&r21);
-    bpt.addRecord(&r22);/**/
+    bpt.addRecord(&r22);
+    bpt.addRecord(&r23);
 
     bpt.displayTree(bpt.root);
 
     // testing retrieval of records based on key
-    int k = 60;
+    int k = 100;
     if (bpt.getBucket(k))
     {
-        cout << "First record w NumOfVotes == " << k << ": " << reinterpret_cast<Record*>(bpt.getBucket(k)->ptr[0])->toString() << endl;
+        Bucket* b = bpt.getBucket(k);
+        int bi = 1;
+
+        while (b->overflowed)
+        {
+            for (int i = 0; i < b->size; i++)
+            {
+                cout << bi << " record w NumOfVotes == " << k << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+                bi++;
+            }
+            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+        }
+        for (int i = 0; i < b->size; i++)
+        {
+            cout << bi << " record w NumOfVotes == " << k << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+            bi++;
+        }
     }
     else
         cout << "Record w NumOfVotes == " << k << " cannot be found !" << endl;
