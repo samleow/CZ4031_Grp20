@@ -14,11 +14,11 @@ using namespace std;
 #define BLOCK_SIZE          100
 #define BLOCKS_IN_DISK      (DISK_SIZE/BLOCK_SIZE)
 #define RECORD_SIZE         sizeof(Record)
-#define RECORDS_PER_BLOCK   ((BLOCK_SIZE-sizeof(int))/RECORD_SIZE)
+#define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
-const static int N =        4;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N =        3;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
 
 struct Record
@@ -57,7 +57,8 @@ struct Record
 struct Disk_Block
 {
     // header includes id
-    int id;
+    int id = -1;
+    int size = 0;
 
     Record records[RECORDS_PER_BLOCK];
 };
@@ -270,6 +271,7 @@ public:
                 p->key[i] = key;
                 p->size++;
                 is_set = true;
+
                 return i;
             }
         }
@@ -561,9 +563,8 @@ public:
     // Updates all parent nodes recursively on insertion
     void insertParentUpdate(Node* p, Node* c, int key)
     {
-        // TODO: update parents and iterate through the top
-        // if parent node is full, need to split and update parent's parent and iterate to top
-
+        // TODO: check if working
+        
         // if parent node still have space
         if (p->size < N)
         {
@@ -675,6 +676,9 @@ public:
                         cout << "ERROR : B+ Tree linkage problem! Child Node with first Key " << n->key[0] << " will not be inserted into the tree." << endl;
                         return;
                     }
+
+                    if (!n)
+                        cout << "ISNULL" << endl;
 
                     insertParentUpdate(p, n, n->key[0]);
 
@@ -813,6 +817,7 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
             r.num_of_votes = stoi(num_of_votes);
 
             disk[blk_counter].records[rec_counter] = r;
+            disk[blk_counter].size++;
             rec_counter++;
         }
     }
@@ -882,11 +887,12 @@ int main()
     BPlusTree bpt;
 
     // TODO: populate B+ tree with actual data
-    //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+    //for (int i = 0; i < 30/*BLOCKS_WITH_RECORDS*/; i++)
     //{
-    //    for (int j = 0; j < RECORDS_PER_BLOCK; j++)
+    //    for (int j = 0; j < disk[i].size; j++)
     //    {
-    //        //bpt.addRecord(disk[i].records[j]);
+    //        cout << "Record - " << disk[i].records[j].toString() << endl;
+    //        bpt.addRecord(&(disk[i].records[j]));
     //    }
     //}
 
@@ -904,7 +910,7 @@ int main()
     Record r11(8, 5.7, 8);
     Record r12(7, 2.0, 7);
     Record r13(6, 3.9, 11);
-    Record r14(3, 3.3, 10);
+    Record r14(3, 3.3, 10); // prob
     Record r15(13, 1.3, 15);
     Record r16(21, 2.7, 21);
     Record r17(8, 5.7, 30);
@@ -928,8 +934,8 @@ int main()
     bpt.addRecord(&r11);
     bpt.addRecord(&r12);
     bpt.addRecord(&r13);
-    bpt.addRecord(&r14);
-    bpt.addRecord(&r15);
+    //bpt.addRecord(&r14); // prob
+    /*bpt.addRecord(&r15);
     bpt.addRecord(&r16);
     bpt.addRecord(&r17);
     bpt.addRecord(&r18);
@@ -937,16 +943,18 @@ int main()
     bpt.addRecord(&r20);
     bpt.addRecord(&r21);
     bpt.addRecord(&r22);
-    bpt.addRecord(&r23);
+    bpt.addRecord(&r23);*/
 
     bpt.displayTree(bpt.root);
 
     // testing retrieval of records based on key
-    int k = 100;
+    /*int k = 15;
     if (bpt.getBucket(k))
     {
         Bucket* b = bpt.getBucket(k);
         int bi = 1;
+
+        cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << endl;
 
         while (b->overflowed)
         {
@@ -964,7 +972,7 @@ int main()
         }
     }
     else
-        cout << "Record w NumOfVotes == " << k << " cannot be found !" << endl;
+        cout << "Record w NumOfVotes == " << k << " cannot be found !" << endl;*/
 
 #pragma endregion
 
