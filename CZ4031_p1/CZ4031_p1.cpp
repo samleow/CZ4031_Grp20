@@ -763,7 +763,7 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
             getline(iss, avg_rating, '\t');
             getline(iss, num_of_votes, '\t');
 
-            id = line.substr(2);
+            id = id.substr(2);
             r.id = stoi(id);
             r.avg_rating = stof(avg_rating);
             r.num_of_votes = stoi(num_of_votes);
