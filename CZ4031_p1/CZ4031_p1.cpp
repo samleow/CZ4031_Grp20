@@ -15,7 +15,7 @@ using namespace std;
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
-#define DATA_FILE           "data.tsv"
+#define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
 const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
@@ -131,6 +131,8 @@ public:
     int height = 0;
     // number of nodes in the tree
     int num_of_nodes = 0;
+    // number of buckets in the tree
+    int num_of_buckets = 0;
 
     BPlusTree()
     {
@@ -163,6 +165,7 @@ public:
         {
             // create new overflow bucket
             Bucket* nb = new Bucket(r->num_of_votes);
+            num_of_buckets++;
             nb->ptr[0] = (uintptr_t)r;
             nb->size++;
 
@@ -195,6 +198,7 @@ public:
 
                 // create a new bucket to store record
                 Bucket* nb = new Bucket(r->num_of_votes);
+                num_of_buckets++;
                 nb->ptr[0] = (uintptr_t)r;
                 nb->size++;
 
@@ -213,6 +217,7 @@ public:
 
             // create a new bucket to store record
             Bucket* nb = new Bucket(r->num_of_votes);
+            num_of_buckets++;
             nb->ptr[0] = (uintptr_t)r;
             nb->size++;
 
@@ -620,6 +625,7 @@ public:
 
             // create a new bucket to store record
             Bucket* nb = new Bucket(r->num_of_votes);
+            num_of_buckets++;
             nb->ptr[0] = (uintptr_t)r;
             nb->size++;
 
@@ -666,6 +672,7 @@ public:
 
                 // create a new bucket to store record
                 Bucket* nb = new Bucket(r->num_of_votes);
+                num_of_buckets++;
                 nb->ptr[0] = (uintptr_t)r;
                 nb->size++;
 
@@ -910,6 +917,7 @@ int main()
 
     cout << "Size of each pointer: " << POINTER_SIZE << "B" << endl;
     cout << "Number of maximum keys in a B+ tree node (n): " << N << endl;
+    cout << "Number of maximum records in a B+ tree bucket: " << RECORDS_PER_BUCKET << endl;
 
     BPlusTree bpt;
 
@@ -947,6 +955,7 @@ int main()
     bpt.addRecord(&r10);*/
 
     cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
+    cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
     cout << "Height of the B+ tree: " << bpt.height << endl;
 
     //bpt.displayTree(bpt.root);
@@ -1050,6 +1059,7 @@ int main()
 
     // display results
     //cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
+    //cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
     //cout << "Height of the B+ tree: " << bpt.height << endl;
 
 #pragma endregion
