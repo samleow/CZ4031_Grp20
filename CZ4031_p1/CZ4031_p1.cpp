@@ -15,7 +15,7 @@ using namespace std;
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
-#define DATA_FILE           "dataTest.tsv"
+#define DATA_FILE           "data.tsv"
 // TODO: change back N
 const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
