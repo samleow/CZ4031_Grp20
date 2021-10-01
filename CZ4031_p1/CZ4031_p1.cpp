@@ -17,7 +17,7 @@ using namespace std;
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "data.tsv"
 // TODO: change back N
-const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N = 2;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
 
 struct Record
@@ -82,6 +82,15 @@ public:
         // TODO: fix delete
         //delete[] ptr;
         //delete[] key;
+    }
+
+    void print()
+    {
+        for (int i = 0; i < size; i++)
+        {
+            cout << key[i] << "\t";
+        }
+        cout << endl;
     }
 };
 
@@ -262,7 +271,7 @@ public:
         return p;
     }
 
-    Node* searchAndPrintExperimentThree(Node** n, int key)
+	Node* searchAndPrintExperimentThree(Node** n, int key)
     {
         Node* p = NULL;
         Node* nodeArray[5];
@@ -285,13 +294,13 @@ public:
                 if (key < (*n)->key[i])
                 {
                     (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
-                    goto loop;
+					goto loop;
                     //break;
                 }
             }
 
             if ((*n)->isLeaf)
-            {
+			{
                 break;
             }
             else
@@ -313,7 +322,40 @@ public:
             for(int j = 0; j < nodeArray[i]->size; j++)
             {
                 cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << endl;
+				}
+        }
+        return p;
+    }
+
+	// searches through node recursively to get left leaf sibling of record
+    // returns the parent node
+    Node* searchForLeftLeafSiblingOfKey(Node** n, int key)
+    {
+        Node* p = NULL;
+
+        // advances down all levels of tree
+        // TODO: try find alternative to goto
+		loop:
+        while (!(*n)->isLeaf)
+        {
+            p = (*n);
+            for (int i = (*n)->size - 1; i >= 0; i--)
+            {
+                if (key > (*n)->key[i])
+                {
+                    (*n) = reinterpret_cast<Node*>((*n)->ptr[i+1]);
+					goto loop;
+                    //break;
+                }
             }
+
+            if ((*n)->isLeaf)
+				break;
+            else
+            {
+                // record is smaller than the first key
+                (*n) = reinterpret_cast<Node*>((*n)->ptr[0]);
+				}
         }
         return p;
     }
@@ -541,7 +583,7 @@ public:
 
     }
 
-    // Updates all parent nodes recursively on insertion
+    // updates all parent nodes recursively on insertion
     void insertParentUpdate(Node* p, Node* c, int key)
     {
         // if parent node still have space
@@ -708,7 +750,7 @@ public:
 
         }
     }
-
+	
     // get the bucket with given key
     Bucket* getBucket(int key, bool print)
     {
@@ -734,6 +776,269 @@ public:
         return NULL;
     }
 
+    // updates all parent nodes recursively on key change
+    void changeKeyParentUpdate(Node* p, int key, int new_key)
+    {
+        // get key pos
+        int key_pos = getKeyPositionInNode(p, key);
+
+        // if key_pos is -1 (no key, ptr is first ptr[0])
+        // need to loop on parent until key_pos >= 0
+        // if found parent with key_pos >= 0, update key
+        // if hit root on loop, update root key
+        if (key_pos != -1)
+        {
+            p->key[key_pos] = new_key;
+        }
+        else
+        {
+            if(p != root)
+                changeKeyParentUpdate(getParentNode(root, p), key, new_key);
+        }
+
+    }
+
+    // returns the key position in a node
+    // if key not found, returns -1
+    int getKeyPositionInNode(Node* n, int key)
+    {
+        for (int i = 0; i < n->size; i++)
+        {
+            if (n->key[i] == key)
+                return i;
+        }
+        return -1;
+    }
+
+    // returns the sibling nodes of child node
+    tuple<Node*, Node*> getLeafSiblings(Node* p, Node* c)
+    {
+        // sibling nodes
+        Node* sl = NULL; Node* sr = NULL;
+        // get right sibling
+        if (c->ptr[N + 1])
+            sr = reinterpret_cast<Node*>(c->ptr[N + 1]);
+        
+        // get left sibling
+        int key_pos = getKeyPositionInNode(p, c->key[0]);
+        // if left sibling is under parent
+        if (key_pos != -1)
+        {
+            sl = reinterpret_cast<Node*>(p->ptr[key_pos]);
+            return make_tuple(sl, sr);
+        }
+        else
+        {
+            // find left sibling
+            sl = root;
+            searchForLeftLeafSiblingOfKey(&sl, c->key[0]);
+
+            // if child node is first leaf node from the left
+            if (sl == c)
+                sl = NULL;
+
+            return make_tuple(sl, sr);
+        }
+    }
+
+    // deletes all records with given key
+    // returns true if bucket of records found and successfully deleted
+    bool deleteRecord(int key)
+    {
+        // no tree
+        if (!root)
+            return false;
+
+        Bucket* b = NULL;
+        Node* curr = root;
+        // parent of leaf node
+        Node* p = searchForLeafNodeWithKey(&curr, key);
+
+        /*if (!curr)
+            return NULL;*/
+
+        // bucket position
+        int delete_pos = 0;
+        for (delete_pos = 0; delete_pos < curr->size; delete_pos++)
+        {
+            // returns record if key match
+            if (key == curr->key[delete_pos])
+            {
+                b = reinterpret_cast<Bucket*>(curr->ptr[delete_pos]);
+                break;
+            }
+        }
+        // no bucket found
+        if(!b)
+            return false;
+
+        // TODO: Update parents and merge nodes based on scenarios
+        // 3 scenarios:
+        //  1. Simple deletion (leaf node still hits minimum num of keys after deletion)
+        //      Need to update parent if left most key affected
+        //  2. Borrow key from sibling (leaf node lacks min keys, borrows from sibling that has more than min keys)
+        //      Needs to update parent after borrow and loop
+        //  3. Merge with sibling (leaf node lacks min keys, sibling only has min keys)
+        //      Needs to update parent after merge and loop
+
+        // Simple deletion
+        if (curr->size - 1 >= min_key_in_leaf)
+        {
+            cout << "SIMPLE DELETION" << endl;
+
+            // delete bucket from node
+            for (int i = curr->size - 1; i > delete_pos; i--)
+            {
+                curr->key[i - 1] = curr->key[i];
+                curr->ptr[i - 1] = curr->ptr[i];
+            }
+            curr->key[curr->size - 1] = NULL;
+            curr->ptr[curr->size - 1] = NULL;
+            curr->size--;
+            delete b;
+            num_of_buckets--;
+
+            // if whole node is deleted, eg. N = 2
+            if (curr->size == 0)
+            {
+                // if curr is the only node in the tree
+                if (curr == root)
+                {
+                    // delete whole tree
+                    delete[] curr->key;
+                    delete[] curr->ptr;
+                    delete curr;
+                    root = NULL;
+                    return true;
+                }
+
+                // TODO: delete leaf node and update parents
+                // might need to recursively update parents as parent nodes may merge as well
+            }
+            // if the first key of the leaf node is deleted
+            if (delete_pos == 0)
+            {
+                // update parent
+                changeKeyParentUpdate(p, key, curr->key[0]);
+            }
+        }
+        // Borrow key from sibling
+        else
+        {
+            // sibling nodes
+            Node* sl = NULL; Node* sr = NULL;
+            tie(sl, sr) = getLeafSiblings(p, curr);
+            // sibling's parent
+            Node* sp = NULL;
+
+            if (sl)
+            {
+                cout << "sl\t";
+                sl->print();
+            }
+            if (sr)
+            {
+                cout << "sr\t";
+                sr->print();
+            }
+
+            if (sl && sl->size-1 >= min_key_in_leaf)
+            {
+                // borrow from left sibling
+                cout << "BORROWING FROM LEFT" << endl;
+
+                // delete bucket from node
+                for (int i = curr->size - 1; i > delete_pos; i--)
+                {
+                    curr->key[i - 1] = curr->key[i];
+                    curr->ptr[i - 1] = curr->ptr[i];
+                }
+                curr->key[curr->size - 1] = NULL;
+                curr->ptr[curr->size - 1] = NULL;
+                curr->size--;
+                delete b;
+                num_of_buckets--;
+
+                // shifting curr node keys
+                for (int i = 0; i < curr->size; i++)
+                {
+                    curr->key[i + 1] = curr->key[i];
+                    curr->ptr[i + 1] = curr->ptr[i];
+                }
+                // transferring sibling key
+                curr->key[0] = sl->key[sl->size-1];
+                curr->ptr[0] = sl->ptr[sl->size - 1];
+                curr->size++;
+                sl->key[sl->size - 1] = NULL;
+                sl->ptr[sl->size - 1] = NULL;
+                sl->size--;
+
+                // update parent keys
+                sp = getLeafParent(root, sl);
+                changeKeyParentUpdate(sp, key, curr->key[0]);
+            }
+            else if (sr && sr->size-1 >= min_key_in_leaf)
+            {
+                // borrow from right sibling
+                cout << "BORROWING FROM RIGHT" << endl;
+
+                // delete bucket from node
+                for (int i = curr->size - 1; i > delete_pos; i--)
+                {
+                    curr->key[i - 1] = curr->key[i];
+                    curr->ptr[i - 1] = curr->ptr[i];
+                }
+                curr->key[curr->size - 1] = NULL;
+                curr->ptr[curr->size - 1] = NULL;
+                curr->size--;
+                delete b;
+                num_of_buckets--;
+
+                // transferring sibling key
+                curr->key[curr->size] = sr->key[0];
+                curr->ptr[curr->size] = sr->ptr[0];
+                curr->size++;
+                // shifting sibling node keys
+                for (int i = 0; i < sr->size - 1; i++)
+                {
+                    sr->key[i] = sr->key[i + 1];
+                    sr->ptr[i] = sr->ptr[i + 1];
+                }
+                // deleting last key in sibling
+                sr->key[sr->size - 1] = NULL;
+                sr->ptr[sr->size - 1] = NULL;
+                sr->size--;
+
+                // update parent keys
+                sp = getLeafParent(root, sr);
+                changeKeyParentUpdate(sp, curr->key[curr->size-1], sr->key[0]);
+            }
+            else
+            {
+                // merge with sibling node
+                cout << "MERGING" << endl;
+
+                // delete bucket from node
+                for (int i = curr->size - 1; i > delete_pos; i--)
+                {
+                    curr->key[i - 1] = curr->key[i];
+                    curr->ptr[i - 1] = curr->ptr[i];
+                }
+                curr->key[curr->size - 1] = NULL;
+                curr->ptr[curr->size - 1] = NULL;
+                curr->size--;
+                delete b;
+                num_of_buckets--;
+
+                // TODO: merging of nodes
+                // might need to recursively update parents as parent nodes may merge as well
+
+            }
+        }
+
+        return true;
+    }
+
 // TODO: remove references etc
 // from https://www.programiz.com/dsa/b-plus-tree
 #pragma region Referenced from online
@@ -750,6 +1055,25 @@ public:
             }
             else {
                 parent = getParentNode(reinterpret_cast<Node*>(tree->ptr[i]), child);
+                if (parent)
+                    return parent;
+            }
+        }
+        return parent;
+    }
+
+    Node* getLeafParent(Node* tree, Node* child)
+    {
+        Node* parent = NULL;
+        if (tree->isLeaf)
+            return NULL;
+        for (int i = 0; i <= tree->size; i++) {
+            if ((reinterpret_cast<Node*>(tree->ptr[i])) == child) {
+                parent = tree;
+                return parent;
+            }
+            else {
+                parent = getLeafParent(reinterpret_cast<Node*>(tree->ptr[i]), child);
                 if (parent)
                     return parent;
             }
@@ -922,17 +1246,17 @@ int main()
     BPlusTree bpt;
 
     // TODO: populate B+ tree with actual data
-    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
-    {
-        for (int j = 0; j < disk[i].size; j++)
-        {
-            //cout << "Record - " << disk[i].records[j].toString() << endl;
-            bpt.addRecord(&(disk[i].records[j]));
-        }
-    }
+    //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+    //{
+    //    for (int j = 0; j < disk[i].size; j++)
+    //    {
+    //        //cout << "Record - " << disk[i].records[j].toString() << endl;
+    //        bpt.addRecord(&(disk[i].records[j]));
+    //    }
+    //}
 
     // for testing/debugging
-    /*Record r1(4, 3.5, 10);
+    Record r1(4, 3.5, 10);
     Record r2(9, 2.7, 20);
     Record r3(214, 2.8, 30);
     Record r4(13, 1.7, 40);
@@ -942,6 +1266,7 @@ int main()
     Record r8(1, 3.9, 80);
     Record r9(214, 2.8, 90);
     Record r10(23, 2.2, 100);
+    Record r11(23, 2.2, 35);
 
     bpt.addRecord(&r1);
     bpt.addRecord(&r2);
@@ -952,7 +1277,8 @@ int main()
     bpt.addRecord(&r7);
     bpt.addRecord(&r8);
     bpt.addRecord(&r9);
-    bpt.addRecord(&r10);*/
+    bpt.addRecord(&r10);
+    bpt.addRecord(&r11);
 
     cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
     cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
@@ -1055,12 +1381,14 @@ int main()
 #pragma region Experiment 5
 
     // delete records
-
+    bpt.deleteRecord(40);
 
     // display results
-    //cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
-    //cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
-    //cout << "Height of the B+ tree: " << bpt.height << endl;
+    cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
+    cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
+    cout << "Height of the B+ tree: " << bpt.height << endl;
+
+    bpt.displayTree(bpt.root);
 
 #pragma endregion
 
