@@ -17,7 +17,7 @@ using namespace std;
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
-const static int N =        2;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
 
 struct Record
@@ -85,8 +85,6 @@ public:
     }
 };
 
-// TODO: create a class/struct for an overflow block that stores pointers to records of the same key,
-// and the last pointer pointing to another overflow block if first block overflows (single linked list method)
 class Bucket
 {
 public:
@@ -132,14 +130,13 @@ public:
 
     BPlusTree()
     {
-        // TODO: this might be improper deletion
-        // did not run through the whole tree and delete child nodes
         root = NULL;
     }
 
     ~BPlusTree()
     {
-        // TODO: fix delete
+        // TODO: this might be improper deletion
+        // did not run through the whole tree and delete child nodes
         //delete root;
     }
 
@@ -174,8 +171,6 @@ public:
     // insert record into leaf node that has space and returns input position
     int insertIntoLeaf(Node* n, Record* r)
     {
-        // TODO: check if working
-
         bool is_set = false;
 
         for (int i = 0; i < n->size; i++)
@@ -225,13 +220,17 @@ public:
     }
 
     // searches through node recursively to get leaf node of record
-    void searchForLeafNodeWithKey(Node** n, int key)
+    // returns the parent node
+    Node* searchForLeafNodeWithKey(Node** n, int key)
     {
+        Node* p = NULL;
+
         // advances down all levels of tree
         // TODO: try find alternative to goto
         loop:
         while (!(*n)->isLeaf)
         {
+            p = (*n);
             for (int i = 0; i < (*n)->size; i++)
             {
                 // record under the left pointer of key
@@ -251,13 +250,12 @@ public:
                 (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
             }
         }
+        return p;
     }
 
-    // insert a child node into a parent node and returns input position
-    int insertChildNode(Node* p, Node* c, int key)
+    // insert a child node into a parent node
+    void insertChildNode(Node* p, Node* c, int key)
     {
-        bool is_set = false;
-
         for (int i = 0; i < p->size; i++)
         {
             if (key < p->key[i])
@@ -272,20 +270,15 @@ public:
                 p->ptr[i + 1] = (uintptr_t)c;
                 p->key[i] = key;
                 p->size++;
-                is_set = true;
 
-                return i;
+                return;
             }
         }
 
         // if child key is bigger than the last parent key
-        if (!is_set)
-        {
-            p->size++;
-            p->ptr[p->size] = (uintptr_t)c;
-            p->key[p->size-1] = key;
-        }
-        return p->size;
+        p->ptr[p->size + 1] = (uintptr_t)c;
+        p->key[p->size] = key;
+        p->size++;
     }
 
     // splits the full leaf node into two and create a slot for insertion
@@ -345,16 +338,11 @@ public:
                 }
 
                 // set record into input position of new node
-
-                //cout << "Insert key: " << key << endl;
-                //cout << "New node input pos: " << input_pos + n->size - N << endl;
                 return make_tuple(n, input_pos + n->size - N);
             }
             // if input position is to stay in current node
             else
             {
-                //cout << "Insert key: " << key << endl;
-                //cout << "Input pos: " << input_pos << endl;
                 for (int i = N - 1; i >= input_pos; i--)
                 {
                     // if keys need to be shifted to new node
@@ -364,7 +352,6 @@ public:
                     // where i is iterator moving left, shift_amount is the amount to shift right and N being the size of the node
                     if (i - min_key_in_leaf + 1 >= 0)
                     {
-                        //cout << "Shifting " << curr->key[i] << " from curr " << i << " to new " << i - min_key_in_leaf + 1 << endl;
                         n->ptr[i - min_key_in_leaf + 1] = curr->ptr[i];
                         n->key[i - min_key_in_leaf + 1] = curr->key[i];
                         n->size++;
@@ -385,182 +372,6 @@ public:
             }
         }
     }
-
-    // splits the full nonleaf node into two and insert node c
-    // returns the parent node after insertion
-    //Node* insertIntoFullNonleafNode(Node* curr, Node* n, int key, Node* c)
-    //{
-    //    int input_pos = -1;
-    //    // get input position of key
-    //    for (int i = 0; i < N; i++)
-    //    {
-    //        if (curr->key[i] <= key && key < curr->key[i + 1])
-    //        {
-    //            input_pos = i + 1;
-    //        }
-    //    }
-
-    //    // new parent node
-    //    Node* p = getParentNode(root, curr);
-    //    if (!p)
-    //        p = new Node();
-    //    // set parent node as root if current node is root
-    //    if (curr == root)
-    //        root = p;
-
-    //    // if input key is smallest key
-    //    if (key < curr->key[0])
-    //        input_pos = 0;
-
-    //    // if input key is largest key
-    //    if (input_pos == -1)
-    //    {
-    //        // shift all keys after minimum num from current to new node
-    //        for (int i = N - min_key_in_nonleaf; i < N; i++)
-    //        {
-    //            n->ptr[i - (N - min_key_in_nonleaf) + 1] = curr->ptr[i + 1];
-    //            n->key[i - (N - min_key_in_nonleaf)] = curr->key[i];
-    //            n->size++;
-    //            curr->ptr[i + 1] = NULL;
-    //            curr->key[i] = NULL;
-    //            curr->size--;
-    //        }
-
-    //        // insert child node c into n
-    //        n->key[n->size] = key;
-    //        n->ptr[n->size + 1] = (uintptr_t)c;
-    //        n->size++;
-
-    //        // move left most key of new node to parent
-    //        p->key[p->size] = n->key[0];
-    //        n->key[0] = NULL;
-    //        n->size--;
-    //        p->ptr[p->size] = (uintptr_t)curr;
-    //        p->ptr[p->size+1] = (uintptr_t)n;
-    //        p->size++;
-
-    //        // shift new node's keys to the left by 1
-    //        for (int i = 0; i < n->size; i++)
-    //        {
-    //            n->key[i] = n->key[i + 1];
-    //            n->ptr[i] = n->ptr[i + 1];
-    //            n->key[i + 1] = NULL;
-    //            n->ptr[i + 1] = NULL;
-    //        }
-
-    //        n->ptr[n->size] = n->ptr[n->size + 1];
-    //        n->ptr[n->size + 1] = NULL;
-
-    //        return p;
-    //    }
-    //    // if input key is placed in between current keys and shifted
-    //    else
-    //    {
-    //        // if need shift current node's input position to new node
-    //        if (input_pos >= N - min_key_in_nonleaf)
-    //        {
-    //            // shift all keys after minimum num from current to new node
-    //            for (int i = N - min_key_in_nonleaf; i < N; i++)
-    //            {
-    //                // offset for keys after input position
-    //                int o = 0;
-    //                // compare with insertion if is greater than or lesser than
-    //                o = (i >= input_pos) ? 1 : 0;
-
-    //                n->ptr[i - (N - min_key_in_nonleaf) + o+1] = curr->ptr[i+1];
-    //                n->key[i - (N - min_key_in_nonleaf) + o] = curr->key[i];
-    //                n->size++;
-    //                curr->ptr[i+1] = NULL;
-    //                curr->key[i] = NULL;
-    //                curr->size--;
-    //            }
-
-    //            // insert child node c into n
-    //            n->key[input_pos + n->size - N] = key;
-    //            n->ptr[input_pos + n->size - N + 1] = (uintptr_t)c;
-    //            n->size++;
-
-    //            // move left most key of new node to parent
-    //            p->key[p->size] = n->key[0];
-    //            n->key[0] = NULL;
-    //            n->size--;
-    //            p->ptr[p->size] = (uintptr_t)curr;
-    //            p->ptr[p->size + 1] = (uintptr_t)n;
-    //            p->size++;
-
-    //            // shift new node's keys to the left by 1
-    //            for (int i = 0; i < n->size; i++)
-    //            {
-    //                n->key[i] = n->key[i + 1];
-    //                n->ptr[i] = n->ptr[i + 1];
-    //                n->key[i + 1] = NULL;
-    //                n->ptr[i + 1] = NULL;
-    //            }
-
-    //            n->ptr[n->size] = n->ptr[n->size + 1];
-    //            n->ptr[n->size + 1] = NULL;
-
-    //            return p;
-    //        }
-    //        // if input position is to stay in current node
-    //        else
-    //        {
-    //            for (int i = N - 1; i >= input_pos; i--)
-    //            {
-    //                // if keys need to be shifted to new node
-    //                // how I got (i - (N - min_key_in_nonleaf) + 1):
-    //                // n pos starts from the rightmost shift key
-    //                // n->ptr[i + shift_amount(N - (N - min_key_in_nonleaf) + 1) - N]
-    //                // where i is iterator moving left, shift_amount is the amount to shift right and N being the size of the node
-    //                if (i - (N - min_key_in_nonleaf) + 1 >= 0)
-    //                {
-    //                    n->ptr[i - (N - min_key_in_nonleaf) + 2] = curr->ptr[i+1];
-    //                    n->key[i - (N - min_key_in_nonleaf) + 1] = curr->key[i];
-    //                    n->size++;
-    //                    curr->ptr[i+1] = NULL;
-    //                    curr->key[i] = NULL;
-    //                    curr->size--;
-    //                }
-    //                // shift current node keys for record's new key position
-    //                else
-    //                {
-    //                    curr->ptr[i + 2] = curr->ptr[i+1];
-    //                    curr->key[i + 1] = curr->key[i];
-    //                }
-    //            }
-
-    //            // insert child node c into n
-    //            curr->key[input_pos] = key;
-    //            curr->ptr[input_pos + 1] = (uintptr_t)c;
-    //            curr->size++;
-
-    //            // move left most key of new node to parent
-    //            p->key[p->size] = n->key[0];
-    //            n->key[0] = NULL;
-    //            n->size--;
-    //            p->ptr[p->size] = (uintptr_t)curr;
-    //            p->ptr[p->size + 1] = (uintptr_t)n;
-    //            p->size++;
-
-    //            // shift new node's keys to the left by 1
-    //            for (int i = 0; i < n->size; i++)
-    //            {
-    //                n->key[i] = n->key[i + 1];
-    //                n->ptr[i] = n->ptr[i + 1];
-    //                n->key[i + 1] = NULL;
-    //                n->ptr[i + 1] = NULL;
-    //            }
-
-    //            n->ptr[n->size] = n->ptr[n->size + 1];
-    //            n->ptr[n->size + 1] = NULL;
-
-    //            return p;
-    //        }
-
-    //    }
-
-    //    return NULL;
-    //}
 
     // splits the full nonleaf node into two and insert node c
     void insertIntoFullNonleafNode(Node** curr, Node** n, int key, Node* c)
@@ -598,24 +409,6 @@ public:
             (*n)->ptr[(*n)->size + 1] = (uintptr_t)c;
             (*n)->size++;
 
-            // move left most key of new node to parent
-            //p->key[p->size] = n->key[0];
-            //n->key[0] = NULL;
-            //n->size--;
-            //p->ptr[p->size] = (uintptr_t)curr;
-            //p->ptr[p->size + 1] = (uintptr_t)n;
-            //p->size++;
-            //// shift new node's keys to the left by 1
-            //for (int i = 0; i < n->size; i++)
-            //{
-            //    n->key[i] = n->key[i + 1];
-            //    n->ptr[i] = n->ptr[i + 1];
-            //    n->key[i + 1] = NULL;
-            //    n->ptr[i + 1] = NULL;
-            //}
-            //n->ptr[n->size] = n->ptr[n->size + 1];
-            //n->ptr[n->size + 1] = NULL;
-
         }
         // if input key is placed in between current keys and shifted
         else
@@ -643,24 +436,6 @@ public:
                 (*n)->key[input_pos + (*n)->size - N] = key;
                 (*n)->ptr[input_pos + (*n)->size - N + 1] = (uintptr_t)c;
                 (*n)->size++;
-
-                // move left most key of new node to parent
-                //p->key[p->size] = n->key[0];
-                //n->key[0] = NULL;
-                //n->size--;
-                //p->ptr[p->size] = (uintptr_t)curr;
-                //p->ptr[p->size + 1] = (uintptr_t)n;
-                //p->size++;
-                //// shift new node's keys to the left by 1
-                //for (int i = 0; i < n->size; i++)
-                //{
-                //    n->key[i] = n->key[i + 1];
-                //    n->ptr[i] = n->ptr[i + 1];
-                //    n->key[i + 1] = NULL;
-                //    n->ptr[i + 1] = NULL;
-                //}
-                //n->ptr[n->size] = n->ptr[n->size + 1];
-                //n->ptr[n->size + 1] = NULL;
 
             }
             // if input position is to stay in current node
@@ -695,24 +470,6 @@ public:
                 (*curr)->ptr[input_pos + 1] = (uintptr_t)c;
                 (*curr)->size++;
 
-                // move left most key of new node to parent
-                //p->key[p->size] = n->key[0];
-                //n->key[0] = NULL;
-                //n->size--;
-                //p->ptr[p->size] = (uintptr_t)curr;
-                //p->ptr[p->size + 1] = (uintptr_t)n;
-                //p->size++;
-                //// shift new node's keys to the left by 1
-                //for (int i = 0; i < n->size; i++)
-                //{
-                //    n->key[i] = n->key[i + 1];
-                //    n->ptr[i] = n->ptr[i + 1];
-                //    n->key[i + 1] = NULL;
-                //    n->ptr[i + 1] = NULL;
-                //}
-                //n->ptr[n->size] = n->ptr[n->size + 1];
-                //n->ptr[n->size + 1] = NULL;
-
             }
 
         }
@@ -721,9 +478,7 @@ public:
 
     // Updates all parent nodes recursively on insertion
     void insertParentUpdate(Node* p, Node* c, int key)
-    {
-        // TODO: check if working
-        
+    {        
         // if parent node still have space
         if (p->size < N)
         {
@@ -733,23 +488,15 @@ public:
         else
         {
             // split parent nodes and shift keys
+            // recursively loops until new parent node is root
 
             // new node for split
             Node* n = new Node();
-            // new parent node after splitting
-            //Node* np = insertIntoFullNonleafNode(p, n, key, c);
 
-            //// recursively loops until new parent node is root
-            //if (np != root)
-            //{
-            //    // parent of p and n
-            //    insertParentUpdate(getParentNode(root, p), np, np->key[0]);
-            //}
-
-            // new parent node after splitting
+            // splitting
             insertIntoFullNonleafNode(&p, &n, key, c);
 
-            // recursively loops until new parent node is root
+            // if parent is the root, make new parent and set new root
             if (p == root)
             {
                 // move left most key of new node to parent
@@ -758,6 +505,7 @@ public:
                 np->ptr[0] = (uintptr_t)p;
                 np->ptr[1] = (uintptr_t)n;
                 np->size++;
+                root = np;
 
                 // shift new node's keys to the left by 1
                 for (int i = 0; i < n->size; i++)
@@ -787,7 +535,7 @@ public:
                 n->ptr[n->size + 1] = NULL;
                 n->size--;
 
-                // TODO: WIP here !!!
+                // recursively loops for all parents
                 insertParentUpdate(getParentNode(root, p), n, key);
             }
         }
@@ -801,7 +549,6 @@ public:
         // i.e. tree is not built yet
         if (!root)
         {
-            // TODO: check if working
             Node* n = new Node();
             root = n;
             n->isLeaf = true;
@@ -821,7 +568,7 @@ public:
             Node* curr = root;
 
             // searches through tree till it hit the leaf node w the key
-            searchForLeafNodeWithKey(&curr, r->num_of_votes);
+            Node* p = searchForLeafNodeWithKey(&curr, r->num_of_votes);
 
             int key_pos = -1;
             for (int i = 0; i < curr->size; i++)
@@ -847,7 +594,6 @@ public:
                 curr->ptr[N] = (uintptr_t)n;
                 n->isLeaf = true;
 
-                // TODO: check if working
                 Node* t; int input_pos;
                 // split full node equally between curr and n nodes
                 tie(t, input_pos) = splitFullLeafNodeForInsert(curr, n, r->num_of_votes);
@@ -865,7 +611,7 @@ public:
                 // if current leaf node have no parent, create parent and set as root
                 if (curr == root)
                 {
-                    Node* p = new Node();
+                    p = new Node();
                     p->ptr[0] = (uintptr_t)curr;
                     p->key[0] = n->key[0];
                     p->ptr[1] = (uintptr_t)n;
@@ -874,8 +620,6 @@ public:
                 }
                 else
                 {
-                    // this whole else statement might need to loop till parent is root
-                    Node* p = getParentNode(root, curr);
                     if (!p)
                     {
                         cout << "ERROR : B+ Tree linkage problem! Child Node with first Key " << n->key[0] << " will not be inserted into the tree." << endl;
@@ -913,12 +657,13 @@ public:
     }
 
 // TODO: remove references etc
+// from https://www.programiz.com/dsa/b-plus-tree
 #pragma region Referenced from online
 
     Node* getParentNode(Node* tree, Node* child)
     {
         Node* parent = NULL;
-        if (tree->isLeaf)
+        if (tree->isLeaf || reinterpret_cast<Node*>(tree->ptr[0])->isLeaf)
             return NULL;
         for (int i = 0; i <= tree->size; i++) {
             if ((reinterpret_cast<Node*>(tree->ptr[i])) == child) {
@@ -934,13 +679,12 @@ public:
         return parent;
     }
 
-    // from https://www.programiz.com/dsa/b-plus-tree
     void displayTree(Node* n)
     {
         if (n != NULL)
         {
             cout << "\t";
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < n->size; i++)
             {
                 if(n->key[i] == 0)
                     cout << "-\t ";
@@ -1048,7 +792,6 @@ int main()
     // Size of Database (Size of total blocks utilized in BYTES)
     int DATABASE_SIZE = -1;
 
-
     cout << "Disk capacity:\t" << DISK_SIZE << "B" << endl;
     cout << "Block size:\t" << BLOCK_SIZE << "B"  << endl;
     cout << "Blocks in disk:\t" << BLOCKS_IN_DISK << endl;
@@ -1087,65 +830,17 @@ int main()
     BPlusTree bpt;
 
     // TODO: populate B+ tree with actual data
-    //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)//BLOCKS_WITH_RECORDS; i++)
-    //{
-    //    for (int j = 0; j < disk[i].size; j++)
-    //    {
-    //        cout << "Record - " << disk[i].records[j].toString() << endl;
-    //        bpt.addRecord(&(disk[i].records[j]));
-    //    }
-    //}
+    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+    {
+        for (int j = 0; j < disk[i].size; j++)
+        {
+            //cout << "Record - " << disk[i].records[j].toString() << endl;
+            bpt.addRecord(&(disk[i].records[j]));
+        }
+    }
 
     // for testing/debugging
-    /*Record r1(4, 3.5, 1);
-    Record r2(9, 2.7, 2);
-    Record r3(214, 2.8, 5);
-    Record r4(13, 1.7, 4);
-    Record r5(2, 5.7, 3);
-    Record r6(8, 5.7, 9);
-    Record r7(7, 2.0, 12);
-    Record r8(1, 3.9, 18);
-    Record r9(214, 2.8, 6);
-    Record r10(2, 5.7, 20);
-    Record r11(8, 5.7, 8);
-    Record r12(7, 2.0, 7);
-    Record r13(6, 3.9, 11);
-    Record r14(3, 3.3, 10);
-    Record r15(13, 1.3, 15);
-    Record r16(21, 2.7, 21);
-    Record r17(8, 5.7, 30);
-    Record r18(7, 2.0, 60);
-    Record r19(6, 3.9, 70);
-    Record r20(3, 3.3, 80);
-    Record r21(13, 1.3, 90);
-    Record r22(21, 2.7, 100);
-    Record r23(35, 4.2, 100);
-
-    bpt.addRecord(&r1);
-    bpt.addRecord(&r2);
-    bpt.addRecord(&r3);
-    bpt.addRecord(&r4);
-    bpt.addRecord(&r5);
-    bpt.addRecord(&r6);
-    bpt.addRecord(&r7);
-    bpt.addRecord(&r8);
-    bpt.addRecord(&r9);
-    bpt.addRecord(&r10);
-    bpt.addRecord(&r11);
-    bpt.addRecord(&r12);
-    bpt.addRecord(&r13); 
-    bpt.addRecord(&r14);
-    bpt.addRecord(&r15);
-    bpt.addRecord(&r16);
-    bpt.addRecord(&r17);
-    bpt.addRecord(&r18);
-    bpt.addRecord(&r19);
-    bpt.addRecord(&r20);
-    bpt.addRecord(&r21);
-    bpt.addRecord(&r22);
-    bpt.addRecord(&r23);*/
-
-    Record r1(4, 3.5, 10);
+    /*Record r1(4, 3.5, 10);
     Record r2(9, 2.7, 20);
     Record r3(214, 2.8, 30);
     Record r4(13, 1.7, 40);
@@ -1165,12 +860,14 @@ int main()
     bpt.addRecord(&r7);
     bpt.addRecord(&r8);
     bpt.addRecord(&r9);
-    //bpt.addRecord(&r10);
+    bpt.addRecord(&r10);*/
 
     bpt.displayTree(bpt.root);
 
     // testing retrieval of records based on key
-    /*int k = 15;
+    // Experiment 3
+
+    /*int k = 50;
     if (bpt.getBucket(k))
     {
         Bucket* b = bpt.getBucket(k);
@@ -1221,6 +918,7 @@ int main()
 
 
     // deletes memory from pointer
+    // might be improper delete, need to check
     delete[] disk;
 
     return 0;
