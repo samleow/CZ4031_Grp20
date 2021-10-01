@@ -15,7 +15,7 @@ using namespace std;
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
-#define DATA_FILE           "data.tsv"
+#define DATA_FILE           "dataTest.tsv"
 // TODO: change back N
 const static int N = 2;// floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
@@ -816,8 +816,8 @@ public:
         // sibling nodes
         Node* sl = NULL; Node* sr = NULL;
         // get right sibling
-        if (c->ptr[N + 1])
-            sr = reinterpret_cast<Node*>(c->ptr[N + 1]);
+        if (c->ptr[N])
+            sr = reinterpret_cast<Node*>(c->ptr[N]);
         
         // get left sibling
         int key_pos = getKeyPositionInNode(p, c->key[0]);
@@ -914,6 +914,9 @@ public:
 
                 // TODO: delete leaf node and update parents
                 // might need to recursively update parents as parent nodes may merge as well
+                // might need to set root as well
+
+
             }
             // if the first key of the leaf node is deleted
             if (delete_pos == 0)
@@ -931,6 +934,7 @@ public:
             // sibling's parent
             Node* sp = NULL;
 
+            // debugging
             if (sl)
             {
                 cout << "sl\t";
@@ -1032,6 +1036,70 @@ public:
 
                 // TODO: merging of nodes
                 // might need to recursively update parents as parent nodes may merge as well
+                // might need to set root as well
+
+                // merge with left sibling
+                if (p == getLeafParent(root, sl))
+                {
+                    cout << "MERGE W LEFT" << endl;
+
+                    // TODO:
+
+
+                }
+                // merge with right sibling
+                else if (p == getLeafParent(root, sr))
+                {
+                    cout << "MERGE W RIGHT" << endl;
+
+                    // store position of key in parent for updating
+                    int k = getKeyPositionInNode(p, sr->key[0]);
+
+                    // shift right sibling keys over to curr
+                    for (int i = 0; i < sr->size; i++)
+                    {
+                        curr->key[curr->size] = sr->key[i];
+                        curr->ptr[curr->size] = sr->ptr[i];
+                        curr->size++;
+                    }
+
+                    // link curr to right sibling's right sibling
+                    curr->ptr[N] = sr->ptr[N];
+
+                    // delete right sibling node
+                    delete[] sr->key;
+                    delete[] sr->ptr;
+                    delete sr;
+
+                    // shift all parent's key after right sibling to the left
+                    for (int i = k; i < p->size - 1; i++)
+                    {
+                        p->key[i] = p->key[i + 1];
+                        p->ptr[i + 1] = p->ptr[i + 2];
+                    }
+                    p->key[p->size - 1] = NULL;
+                    p->ptr[p->size] = NULL;
+                    p->size--;
+
+                    // need to further update parent keys
+                    changeKeyParentUpdate(p, key, curr->key[0]);
+                    
+                    // check if need loop merging of parent nodes
+                    if (p->size < min_key_in_nonleaf)
+                    {
+                        cout << "NEED MERGE PARENT NODES" << endl;
+
+                        // TODO: 
+
+
+                    }
+
+                }
+                else
+                {
+                    cout << "ERROR GETTING SIBLING TO MERGE !!" << endl;
+                }
+
 
             }
         }
@@ -1284,7 +1352,7 @@ int main()
     cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
     cout << "Height of the B+ tree: " << bpt.height << endl;
 
-    //bpt.displayTree(bpt.root);
+    bpt.displayTree(bpt.root);
 
 #pragma endregion
 
@@ -1380,8 +1448,10 @@ int main()
     // Experiment 5 - Deletion of records based on key
 #pragma region Experiment 5
 
+    cout << "\n\tExperiment 5:" << endl << endl;
+
     // delete records
-    bpt.deleteRecord(40);
+    bpt.deleteRecord(70);
 
     // display results
     cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
