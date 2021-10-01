@@ -127,6 +127,10 @@ public:
     int min_key_in_leaf = floor((N + 1) / 2);
     // floor(N / 2)
     int min_key_in_nonleaf = floor(N / 2);
+    // height of tree (inclusive of leaf level)
+    int height = 0;
+    // number of nodes in the tree
+    int num_of_nodes = 0;
 
     BPlusTree()
     {
@@ -492,6 +496,7 @@ public:
 
             // new node for split
             Node* n = new Node();
+            num_of_nodes++;
 
             // splitting
             insertIntoFullNonleafNode(&p, &n, key, c);
@@ -501,11 +506,13 @@ public:
             {
                 // move left most key of new node to parent
                 Node* np = new Node();
+                num_of_nodes++;
                 np->key[0] = n->key[0];
                 np->ptr[0] = (uintptr_t)p;
                 np->ptr[1] = (uintptr_t)n;
                 np->size++;
                 root = np;
+                height++;
 
                 // shift new node's keys to the left by 1
                 for (int i = 0; i < n->size; i++)
@@ -550,7 +557,9 @@ public:
         if (!root)
         {
             Node* n = new Node();
+            num_of_nodes++;
             root = n;
+            height++;
             n->isLeaf = true;
 
             // create a new bucket to store record
@@ -591,6 +600,7 @@ public:
             {
                 // creating a new leaf node and splitting records equally
                 Node* n = new Node();
+                num_of_nodes++;
                 curr->ptr[N] = (uintptr_t)n;
                 n->isLeaf = true;
 
@@ -612,11 +622,13 @@ public:
                 if (curr == root)
                 {
                     p = new Node();
+                    num_of_nodes++;
                     p->ptr[0] = (uintptr_t)curr;
                     p->key[0] = n->key[0];
                     p->ptr[1] = (uintptr_t)n;
                     p->size++;
                     root = p;
+                    height++;
                 }
                 else
                 {
@@ -789,6 +801,9 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
 
 int main()
 {
+    // printing of the database statistics etc.
+#pragma region Database statistics
+
     // Total number of records in data
     // initialized as -1 for debugging
     int TOTAL_RECORD_COUNT = -1;
@@ -808,6 +823,9 @@ int main()
     TOTAL_RECORD_COUNT = getTotalRecordCount();
     cout << "Total num of records:\t" << TOTAL_RECORD_COUNT << endl;
 
+#pragma endregion
+
+    // Experiment 1 - Initialise database and store records
 #pragma region Experiment 1
 
     cout << "\n\tExperiment 1:" << endl << endl;
@@ -826,6 +844,7 @@ int main()
 
 #pragma endregion
 
+    // Experiment 2 - Initialise B+ tree and populate with records
 #pragma region Experiment 2
 
     cout << "\n\tExperiment 2:" << endl;
@@ -868,12 +887,20 @@ int main()
     bpt.addRecord(&r9);
     bpt.addRecord(&r10);*/
 
+    cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
+    cout << "Height of the B+ tree: " << bpt.height << endl;
+
     bpt.displayTree(bpt.root);
+
+#pragma endregion
+
+    // Experiment 3 - Retrieval of records with a single key
+#pragma region Experiment 3
 
     // testing retrieval of records based on key
     // Experiment 3
 
-    /*int k = 50;
+    /*int k = 0;
     if (bpt.getBucket(k))
     {
         Bucket* b = bpt.getBucket(k);
@@ -901,7 +928,26 @@ int main()
 
 #pragma endregion
 
+    // Experiment 4 - Retrieval of records with a range of keys
+#pragma region Experiment 4
 
+
+
+#pragma endregion
+
+    // Experiment 5 - Deletion of records based on key
+#pragma region Experiment 5
+
+    // delete records
+
+
+    // display results
+    //cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
+    //cout << "Height of the B+ tree: " << bpt.height << endl;
+
+#pragma endregion
+
+    // for debugging the database storage
 #pragma region debugging Disk_block
 
     // for debugging
