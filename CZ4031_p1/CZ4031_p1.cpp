@@ -15,7 +15,7 @@ using namespace std;
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
-#define DATA_FILE           "dataTest.tsv"
+#define DATA_FILE           "data.tsv"
 // TODO: change back N
 const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
@@ -482,7 +482,7 @@ public:
 
     // Updates all parent nodes recursively on insertion
     void insertParentUpdate(Node* p, Node* c, int key)
-    {        
+    {
         // if parent node still have space
         if (p->size < N)
         {
@@ -767,11 +767,17 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
             }
 
             Record r;
-            string id = line.substr(2, 7);
+
+            istringstream iss(line);
+            string id,avg_rating,num_of_votes;
+
+            getline(iss, id, '\t');
+            getline(iss, avg_rating, '\t');
+            getline(iss, num_of_votes, '\t');
+
+            id = line.substr(2);
             r.id = stoi(id);
-            string avg_rating = line.substr(10, 3);
             r.avg_rating = stof(avg_rating);
-            string num_of_votes = line.substr(14);
             r.num_of_votes = stoi(num_of_votes);
 
             disk[blk_counter].records[rec_counter] = r;
