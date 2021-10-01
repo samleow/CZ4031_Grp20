@@ -360,6 +360,89 @@ public:
         return p;
     }
 
+    Node* searchAndPrintExperimentFour(Node** n, int key)
+    {
+        Node* p = NULL;
+        Node* nodeArray[5];
+        int nodeCounter = 0;
+        bool containKey = false;
+
+        // advances down all levels of tree
+        // TODO: try find alternative to goto
+        loop:
+        while (!(*n)->isLeaf)
+        {
+            p = (*n);
+            if(nodeCounter < 5)
+            {
+                nodeArray[nodeCounter] = p;
+                nodeCounter++;
+            }
+            for (int i = 0; i < (*n)->size; i++)
+            {
+                // record under the left pointer of key
+                if (key < (*n)->key[i])
+                {
+                    (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
+                    goto loop;
+                    //break;
+                }
+            }
+
+            if ((*n)->isLeaf)
+            {
+                break;
+            }
+            else
+            {
+                // record is larger than the last key
+                (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
+            }
+        }
+
+        if(nodeCounter < 5)
+        {
+            nodeArray[nodeCounter] = (*n);
+            nodeCounter++;
+        }
+
+        for(int i = 0; i < nodeCounter; i++)
+        {
+            // cout << "\n- Node " << i+1 << " -" << endl;
+            for(int j = 0; j < nodeArray[i]->size; j++)
+            {
+                // cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << endl;
+                if(key == nodeArray[i]->key[j])
+                {
+                    containKey = true;
+                }
+            }
+        }
+        
+        // if the B+ tree contain the key start printing the access nodes
+        if(containKey)
+        {
+            for(int i = 0; i < nodeCounter; i++)
+            {
+                cout << "\n- Node " << i+1 << " -" << endl;
+                for(int j = 0; j < nodeArray[i]->size; j++)
+                {
+                    if(key == nodeArray[i]->key[j])
+                        cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << " <----" << endl;
+                    else
+                        cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << endl;
+
+                }
+            }
+        }
+        else
+        {
+            cout << "Record not found" << endl;
+        }
+
+        return p;
+    }
+
     // insert a child node into a parent node
     void insertChildNode(Node* p, Node* c, int key)
     {
@@ -1106,6 +1189,30 @@ public:
 
         return true;
     }
+    // get the bucket with given key range
+    Bucket* getBucketRange(int key, bool print)
+    {
+        if (!root)
+            return NULL;
+
+        Node* curr = root;
+
+        if(!print)
+            searchForLeafNodeWithKey(&curr, key);
+        else
+            searchAndPrintExperimentFour(&curr, key);
+        /*if (!curr)
+            return NULL;*/
+
+        for (int i = 0; i < curr->size; i++)
+        {
+            // returns record if key match
+            if (key == curr->key[i])
+                return reinterpret_cast<Bucket*>(curr->ptr[i]);
+        }
+
+        return NULL;
+    }
 
 // TODO: remove references etc
 // from https://www.programiz.com/dsa/b-plus-tree
@@ -1433,12 +1540,129 @@ int main()
         }
     }
 
-    // the average of ¡°averageRating¡¯s¡± of the records that are returned
+    // the average of ï¿½ï¿½averageRatingï¿½ï¿½sï¿½ï¿½ of the records that are returned
     cout << "\nAverage Rating =  " << avg_rating << endl;
 
 #pragma endregion
 
     // Experiment 4 - Retrieval of records with a range of keys
+    //TODO:
+
+    cout << "\n\tExperiment 4:" << endl << endl;
+    cout << "Number and Content of the Index Nodes the Process Accesses: " << endl;
+
+    int minNumOfVote = 30000;
+    int maxNumOfVote = 40000;
+    int range = minNumOfVote;
+    avg_rating = 0;
+    total_rating = 0;
+    Record* recArrayExp4[5];
+    recCounter = 0;
+
+    cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n"<< endl;
+
+    while((range <= maxNumOfVote) == true)
+    {
+    if (bpt.getBucketRange(range,false))
+    {
+        Bucket* b = bpt.getBucketRange(range,false);
+        int bi = 1;
+
+        //cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n"<< endl;
+
+        while (b->overflowed)
+        {
+            for (int i = 0; i < b->size; i++)
+            {
+                cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+                if(recCounter < 5)
+                {
+                    recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
+                    recCounter++;
+                }
+                total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
+                bi++;
+            }
+            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+        }
+        for (int i = 0; i < b->size; i++)
+        {
+            cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+            if(recCounter < 5)
+            {
+                recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
+                recCounter++;
+            }
+            total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
+            bi++;
+        }
+
+        avg_rating = total_rating/(bi-1);
+
+        // divider
+        cout << "\n" ;
+    }
+    //else
+        //cout << "Record w NumOfVotes == " << range << " cannot be found !" << endl;
+
+    range++;
+    }
+
+
+    //reset the range
+    range = minNumOfVote;
+
+    // TODO: should the range be from 30k to 40k??
+    while((range <= 30100) == true)
+    {
+        cout << "\n Find number of vote: " << range << endl;
+        // the number and the content of index nodes the process accesses
+        bpt.getBucketRange(range,true);
+
+        range++;
+    }
+
+    // the number and the content of data blocks the process accesses
+    for(int i = 0; i < recCounter; i++)
+    {
+        for(int j = 0; j < BLOCKS_WITH_RECORDS; j++)
+        {
+            for(int m = 0; m < RECORDS_PER_BLOCK; m++)
+            {
+                if(recArrayExp4[i]->id == disk[j].records[m].id)
+                {
+                    cout << "\nDisk Block " << j+1 << endl;
+
+                    for(int p = 0; p < RECORDS_PER_BLOCK; p++)
+                    {
+                        cout << "Record " << p+1 << " tconst value: " << disk[j].records[p].id << endl;
+                    }
+                }
+            }
+        }
+    }
+
+    // the average of ï¿½ï¿½averageRatingï¿½ï¿½sï¿½ï¿½ of the records that are returned
+    cout << "\nAverage Rating =  " << avg_rating << endl;
+
+
+
+    // the number and the content of data blocks the process accesses
+    // for(int i = 0; i <BLOCKS_WITH_RECORDS; i++ )
+    // {
+    //     // cout << "Accessing Block: " << i << endl;
+    //     //db = disk[i];
+
+    //     for(int j = 0; j <disk[i].size; j++)
+    //     {
+    //         if (disk[i].records[j].num_of_votes >= 30000 && disk[i].records[j].num_of_votes <= 40000)
+    //         {
+    //             cout << "Accessing Block: " << i << endl;
+    //             cout << "[" << j << "]\t tconst value: " << disk[i].records[j].id << "\t Average rating: " << disk[i].records[j].avg_rating << "\t Number of votes: " << disk[i].records[j].num_of_votes << endl;
+    //         }
+    //     }
+    // }
+    
 #pragma region Experiment 4
 
 
