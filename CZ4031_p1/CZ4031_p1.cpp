@@ -104,11 +104,11 @@ public:
 
 class Bucket
 {
-public:
-    uintptr_t* ptr;
-    int key;
-    int size;
-    bool overflowed;
+    public:
+        uintptr_t* ptr;
+        int key;
+        int size;
+        bool overflowed;
 
     Bucket()
     {
@@ -366,6 +366,7 @@ public:
         return p;
     }
 
+    // for Experiment 4 (search keys with "numVotes" from 30000 to 40000)
     Node* searchAndPrintExperimentFour(Node** n, int key)
     {
         Node* p = NULL;
@@ -424,7 +425,7 @@ public:
             }
         }
 
-        // if the B+ tree contain the key start printing the access nodes
+        // if the B+ tree contains the key, start printing the access nodes
         if(containKey)
         {
             for(int i = 0; i < nodeCounter; i++)
@@ -473,7 +474,7 @@ public:
         p->size++;
     }
 
-    // splits the full leaf node into two and create a slot for insertion
+    // splits the full leaf node into two and creates a slot for insertion
     // returns the node to insert into and the input position
     tuple<Node*, int> splitFullLeafNodeForInsert(Node* curr, Node* n, int key)
     {
@@ -565,7 +566,7 @@ public:
         }
     }
 
-    // splits the full nonleaf node into two and insert node c
+    // splits the full nonleaf node into two and inserts node c
     void insertIntoFullNonleafNode(Node** curr, Node** n, int key, Node* c)
     {
         int input_pos = -1;
@@ -1752,7 +1753,6 @@ void Menu(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
             break;
         }
     }
-
 }
 
 int main()
