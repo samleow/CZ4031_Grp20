@@ -14,7 +14,7 @@ using namespace std;
 #define BLOCKS_IN_DISK      (DISK_SIZE/BLOCK_SIZE)
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
-#define POINTER_SIZE        sizeof(uintptr_t)//4
+#define POINTER_SIZE        sizeof(uintptr_t) //4
 #define DATA_FILE           "data.tsv"
 const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
@@ -31,7 +31,7 @@ struct Record
         avg_rating = -1.0f;
         num_of_votes = -1;
     }
-    
+
     Record(int id, float avg_rating, int num_of_votes)
     {
         this->id = id;
@@ -1572,7 +1572,7 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
              }
          }
      }
-    cout << "Total Data Block accessed: " << totalBlocksAccessed << endl;
+    cout << "Total Data Blocks accessed: " << totalBlocksAccessed << endl;
 
     // the average of averageRatings of the records that are returned
     cout << "Average Rating =  " << avg_rating << endl;
