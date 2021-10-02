@@ -1364,6 +1364,261 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
 
 }
 
+void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
+{
+    // testing retrieval of records based on key
+    // Experiment 3
+    cout << "\n\tExperiment 3:" << endl << endl;
+    cout << "Number and Content of the Index Nodes the Process Accesses: " << endl;
+
+    int k = 500;
+    //    int k = 12;
+    float avg_rating = 0;
+    float total_rating = 0;
+    Record* recArray[5];
+    int recCounter = 0;
+
+    if (bpt->getBucket(k, false))
+    {
+        Bucket* b = bpt->getBucket(k, false);
+        int bi = 1;
+
+        cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n" << endl;
+
+        while (b->overflowed)
+        {
+            for (int i = 0; i < b->size; i++)
+            {
+                cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+                if (recCounter < 5)
+                {
+                    recArray[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
+                    recCounter++;
+                }
+                total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
+                bi++;
+            }
+            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+        }
+        for (int i = 0; i < b->size; i++)
+        {
+            cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+            if (recCounter < 5)
+            {
+                recArray[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
+                recCounter++;
+            }
+            total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
+            bi++;
+        }
+
+        avg_rating = total_rating / (bi - 1);
+    }
+    else
+        cout << "Record w NumOfVotes == " << k << " cannot be found !" << endl;
+
+    // the number and the content of index nodes the process accesses
+    bpt->getBucket(k, true);
+
+    // the number and the content of data blocks the process accesses
+    for (int i = 0; i < recCounter; i++)
+    {
+        for (int j = 0; j < BLOCKS_WITH_RECORDS; j++)
+        {
+            for (int m = 0; m < RECORDS_PER_BLOCK; m++)
+            {
+                if (recArray[i]->id == disk[j].records[m].id)
+                {
+                    cout << "\nDisk Block " << j + 1 << endl;
+
+                    for (int p = 0; p < RECORDS_PER_BLOCK; p++)
+                    {
+                        cout << "Record " << p + 1 << " tconst value: " << disk[j].records[p].id << endl;
+                    }
+                }
+            }
+        }
+    }
+
+    // the average of averageRatings of the records that are returned
+    cout << "\nAverage Rating =  " << avg_rating << endl;
+}
+
+void Experiment4(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
+{
+    // Experiment 4 - Retrieval of records with a range of keys
+    //TODO:
+
+    cout << "\n\tExperiment 4:" << endl << endl;
+    cout << "Number and Content of the Index Nodes the Process Accesses: " << endl;
+
+    int minNumOfVote = 30000;
+    int maxNumOfVote = 40000;
+    int range = minNumOfVote;
+    int avg_rating = 0;
+    int total_rating = 0;
+    Record* recArrayExp4[5];
+    int recCounter = 0;
+
+    cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n" << endl;
+
+    while ((range <= maxNumOfVote) == true)
+    {
+        if (bpt->getBucketRange(range, false))
+        {
+            Bucket* b = bpt->getBucketRange(range, false);
+            int bi = 1;
+
+            //cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n"<< endl;
+
+            while (b->overflowed)
+            {
+                for (int i = 0; i < b->size; i++)
+                {
+                    cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+                    if (recCounter < 5)
+                    {
+                        recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
+                        recCounter++;
+                    }
+                    total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
+                    bi++;
+                }
+                b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+            }
+            for (int i = 0; i < b->size; i++)
+            {
+                cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
+                if (recCounter < 5)
+                {
+                    recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
+                    recCounter++;
+                }
+                total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
+                bi++;
+            }
+
+            avg_rating = total_rating / (bi - 1);
+
+            // divider
+            cout << "\n";
+        }
+        //else
+            //cout << "Record w NumOfVotes == " << range << " cannot be found !" << endl;
+
+        range++;
+    }
+
+
+    //reset the range
+    range = minNumOfVote;
+
+    // TODO: should the range be from 30k to 40k??
+    while ((range <= 30100) == true)
+    {
+        cout << "\n Find number of vote: " << range << endl;
+        // the number and the content of index nodes the process accesses
+        bpt->getBucketRange(range, true);
+
+        range++;
+    }
+
+    // the number and the content of data blocks the process accesses
+    for (int i = 0; i < recCounter; i++)
+    {
+        for (int j = 0; j < BLOCKS_WITH_RECORDS; j++)
+        {
+            for (int m = 0; m < RECORDS_PER_BLOCK; m++)
+            {
+                if (recArrayExp4[i]->id == disk[j].records[m].id)
+                {
+                    cout << "\nDisk Block " << j + 1 << endl;
+
+                    for (int p = 0; p < RECORDS_PER_BLOCK; p++)
+                    {
+                        cout << "Record " << p + 1 << " tconst value: " << disk[j].records[p].id << endl;
+                    }
+                }
+            }
+        }
+    }
+
+    // the average of averageRatings of the records that are returned
+    cout << "\nAverage Rating =  " << avg_rating << endl;
+
+
+
+    // the number and the content of data blocks the process accesses
+    // for(int i = 0; i <BLOCKS_WITH_RECORDS; i++ )
+    // {
+    //     // cout << "Accessing Block: " << i << endl;
+    //     //db = disk[i];
+
+    //     for(int j = 0; j <disk[i].size; j++)
+    //     {
+    //         if (disk[i].records[j].num_of_votes >= 30000 && disk[i].records[j].num_of_votes <= 40000)
+    //         {
+    //             cout << "Accessing Block: " << i << endl;
+    //             cout << "[" << j << "]\t tconst value: " << disk[i].records[j].id << "\t Average rating: " << disk[i].records[j].avg_rating << "\t Number of votes: " << disk[i].records[j].num_of_votes << endl;
+    //         }
+    //     }
+    // }
+}
+
+void Experiment5(BPlusTree* bpt)
+{
+    cout << "\n\tExperiment 5:" << endl << endl;
+
+    // delete records
+    bpt->deleteRecord(70);
+
+    // display results
+    cout << "Number of nodes in the B+ tree: " << bpt->num_of_nodes << endl;
+    cout << "Number of buckets in the B+ tree: " << bpt->num_of_buckets << endl;
+    cout << "Height of the B+ tree: " << bpt->height << endl;
+
+    bpt->displayTree(bpt->root);
+}
+
+void Menu(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
+{
+    int input_i = -1;
+
+    while (input_i != 4)
+    {
+        cout << "\n\t\tMenu" << endl << endl;
+        cout << "1 - Experiment 3" << endl;
+        cout << "2 - Experiment 4" << endl;
+        cout << "3 - Experiment 5" << endl;
+        cout << "4 - Exit program" << endl << endl;
+        cout << "Enter an option (1/2/3/4): ";
+        cin >> input_i;
+        cout << endl << endl;
+
+        // TODO: Error handling
+
+        switch (input_i)
+        {
+        case 1:
+            Experiment3(bpt, disk, BLOCKS_WITH_RECORDS);
+            break;
+        case 2:
+            Experiment4(bpt, disk, BLOCKS_WITH_RECORDS);
+            break;
+        case 3:
+            Experiment5(bpt);
+            break;
+        case 4:
+            cout << "Closing program ..." << endl;
+            break;
+        default:
+            cout << "Invalid input, please try again ..." << endl;
+            break;
+        }
+    }
+
+}
+
 int main()
 {
     // printing of the database statistics etc.
@@ -1420,40 +1675,52 @@ int main()
 
     BPlusTree bpt;
 
-    // TODO: populate B+ tree with actual data
-    //for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
-    //{
-    //    for (int j = 0; j < disk[i].size; j++)
-    //    {
-    //        //cout << "Record - " << disk[i].records[j].toString() << endl;
-    //        bpt.addRecord(&(disk[i].records[j]));
-    //    }
-    //}
+    // TODO: Remove on build and populate B+ tree with actual data
+    char input_c = NULL;
+    cout << "Use full dataset? (Y/N): ";
+    cin >> input_c;
+    cout << endl << endl;
 
-    // for testing/debugging
-    Record r1(4, 3.5, 10);
-    Record r2(9, 2.7, 20);
-    Record r3(214, 2.8, 30);
-    Record r4(13, 1.7, 40);
-    Record r5(2, 5.7, 50);
-    Record r6(8, 5.7, 60);
-    Record r7(7, 2.0, 70);
-    Record r8(1, 3.9, 80);
-    Record r9(214, 2.8, 90);
-    Record r10(23, 2.2, 100);
-    Record r11(23, 2.2, 35);
+    switch (input_c)
+    {
+    case 'Y':
+        // populate B+ tree with actual data
+        for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+        {
+            for (int j = 0; j < disk[i].size; j++)
+            {
+                //cout << "Record - " << disk[i].records[j].toString() << endl;
+                bpt.addRecord(&(disk[i].records[j]));
+            }
+        }
+        break;
+    default:
+        // for testing/debugging
+        Record r1(4, 3.5, 10);
+        Record r2(9, 2.7, 20);
+        Record r3(214, 2.8, 30);
+        Record r4(13, 1.7, 40);
+        Record r5(2, 5.7, 50);
+        Record r6(8, 5.7, 60);
+        Record r7(7, 2.0, 70);
+        Record r8(1, 3.9, 80);
+        Record r9(214, 2.8, 90);
+        Record r10(23, 2.2, 100);
+        Record r11(23, 2.2, 35);
 
-    bpt.addRecord(&r1);
-    bpt.addRecord(&r2);
-    bpt.addRecord(&r3);
-    bpt.addRecord(&r4);
-    bpt.addRecord(&r5);
-    bpt.addRecord(&r6);
-    bpt.addRecord(&r7);
-    bpt.addRecord(&r8);
-    bpt.addRecord(&r9);
-    bpt.addRecord(&r10);
-    bpt.addRecord(&r11);
+        bpt.addRecord(&r1);
+        bpt.addRecord(&r2);
+        bpt.addRecord(&r3);
+        bpt.addRecord(&r4);
+        bpt.addRecord(&r5);
+        bpt.addRecord(&r6);
+        bpt.addRecord(&r7);
+        bpt.addRecord(&r8);
+        bpt.addRecord(&r9);
+        bpt.addRecord(&r10);
+        bpt.addRecord(&r11);
+        break;
+    }
 
     cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
     cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
@@ -1463,228 +1730,8 @@ int main()
 
 #pragma endregion
 
-    // Experiment 3 - Retrieval of records with a single key
-#pragma region Experiment 3
-
-    // testing retrieval of records based on key
-    // Experiment 3
-    cout << "\n\tExperiment 3:" << endl << endl;
-    cout << "Number and Content of the Index Nodes the Process Accesses: " << endl;
-
-    int k = 500;
-//    int k = 12;
-    float avg_rating = 0;
-    float total_rating = 0;
-    Record* recArray[5];
-    int recCounter = 0;
-
-    if (bpt.getBucket(k,false))
-    {
-        Bucket* b = bpt.getBucket(k,false);
-        int bi = 1;
-
-        cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n"<< endl;
-
-        while (b->overflowed)
-        {
-            for (int i = 0; i < b->size; i++)
-            {
-                cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-                if(recCounter < 5)
-                {
-                    recArray[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                    recCounter++;
-                }
-                total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
-                bi++;
-            }
-            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
-        }
-        for (int i = 0; i < b->size; i++)
-        {
-            cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-            if(recCounter < 5)
-            {
-                recArray[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                recCounter++;
-            }
-            total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
-            bi++;
-        }
-
-        avg_rating = total_rating/(bi-1);
-    }
-    else
-        cout << "Record w NumOfVotes == " << k << " cannot be found !" << endl;
-
-    // the number and the content of index nodes the process accesses
-    bpt.getBucket(k,true);
-
-    // the number and the content of data blocks the process accesses
-    for(int i = 0; i < recCounter; i++)
-    {
-        for(int j = 0; j < BLOCKS_WITH_RECORDS; j++)
-        {
-            for(int m = 0; m < RECORDS_PER_BLOCK; m++)
-            {
-                if(recArray[i]->id == disk[j].records[m].id)
-                {
-                    cout << "\nDisk Block " << j+1 << endl;
-
-                    for(int p = 0; p < RECORDS_PER_BLOCK; p++)
-                    {
-                        cout << "Record " << p+1 << " tconst value: " << disk[j].records[p].id << endl;
-                    }
-                }
-            }
-        }
-    }
-
-    // the average of ��averageRating��s�� of the records that are returned
-    cout << "\nAverage Rating =  " << avg_rating << endl;
-
-#pragma endregion
-
-    // Experiment 4 - Retrieval of records with a range of keys
-    //TODO:
-
-    cout << "\n\tExperiment 4:" << endl << endl;
-    cout << "Number and Content of the Index Nodes the Process Accesses: " << endl;
-
-    int minNumOfVote = 30000;
-    int maxNumOfVote = 40000;
-    int range = minNumOfVote;
-    avg_rating = 0;
-    total_rating = 0;
-    Record* recArrayExp4[5];
-    recCounter = 0;
-
-    cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n"<< endl;
-
-    while((range <= maxNumOfVote) == true)
-    {
-    if (bpt.getBucketRange(range,false))
-    {
-        Bucket* b = bpt.getBucketRange(range,false);
-        int bi = 1;
-
-        //cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n"<< endl;
-
-        while (b->overflowed)
-        {
-            for (int i = 0; i < b->size; i++)
-            {
-                cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-                if(recCounter < 5)
-                {
-                    recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                    recCounter++;
-                }
-                total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
-                bi++;
-            }
-            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
-        }
-        for (int i = 0; i < b->size; i++)
-        {
-            cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-            if(recCounter < 5)
-            {
-                recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                recCounter++;
-            }
-            total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
-            bi++;
-        }
-
-        avg_rating = total_rating/(bi-1);
-
-        // divider
-        cout << "\n" ;
-    }
-    //else
-        //cout << "Record w NumOfVotes == " << range << " cannot be found !" << endl;
-
-    range++;
-    }
-
-
-    //reset the range
-    range = minNumOfVote;
-
-    // TODO: should the range be from 30k to 40k??
-    while((range <= 30100) == true)
-    {
-        cout << "\n Find number of vote: " << range << endl;
-        // the number and the content of index nodes the process accesses
-        bpt.getBucketRange(range,true);
-
-        range++;
-    }
-
-    // the number and the content of data blocks the process accesses
-    for(int i = 0; i < recCounter; i++)
-    {
-        for(int j = 0; j < BLOCKS_WITH_RECORDS; j++)
-        {
-            for(int m = 0; m < RECORDS_PER_BLOCK; m++)
-            {
-                if(recArrayExp4[i]->id == disk[j].records[m].id)
-                {
-                    cout << "\nDisk Block " << j+1 << endl;
-
-                    for(int p = 0; p < RECORDS_PER_BLOCK; p++)
-                    {
-                        cout << "Record " << p+1 << " tconst value: " << disk[j].records[p].id << endl;
-                    }
-                }
-            }
-        }
-    }
-
-    // the average of ��averageRating��s�� of the records that are returned
-    cout << "\nAverage Rating =  " << avg_rating << endl;
-
-
-
-    // the number and the content of data blocks the process accesses
-    // for(int i = 0; i <BLOCKS_WITH_RECORDS; i++ )
-    // {
-    //     // cout << "Accessing Block: " << i << endl;
-    //     //db = disk[i];
-
-    //     for(int j = 0; j <disk[i].size; j++)
-    //     {
-    //         if (disk[i].records[j].num_of_votes >= 30000 && disk[i].records[j].num_of_votes <= 40000)
-    //         {
-    //             cout << "Accessing Block: " << i << endl;
-    //             cout << "[" << j << "]\t tconst value: " << disk[i].records[j].id << "\t Average rating: " << disk[i].records[j].avg_rating << "\t Number of votes: " << disk[i].records[j].num_of_votes << endl;
-    //         }
-    //     }
-    // }
-    
-#pragma region Experiment 4
-
-
-
-#pragma endregion
-
-    // Experiment 5 - Deletion of records based on key
-#pragma region Experiment 5
-
-    cout << "\n\tExperiment 5:" << endl << endl;
-
-    // delete records
-    bpt.deleteRecord(70);
-
-    // display results
-    cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
-    cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
-    cout << "Height of the B+ tree: " << bpt.height << endl;
-
-    bpt.displayTree(bpt.root);
-
-#pragma endregion
+    // Menu
+    Menu(&bpt, disk, BLOCKS_WITH_RECORDS);
 
     // for debugging the database storage
 #pragma region debugging Disk_block
