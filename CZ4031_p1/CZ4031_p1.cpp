@@ -16,8 +16,7 @@ using namespace std;
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
 #define POINTER_SIZE        sizeof(uintptr_t)//4
 #define DATA_FILE           "data.tsv"
-// TODO: change back N
-const static int N =       floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
+const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
 
 struct Record
@@ -79,7 +78,6 @@ public:
 
     ~Node()
     {
-        // TODO: fix delete
         //delete[] ptr;
         //delete[] key;
     }
@@ -89,6 +87,15 @@ public:
         for (int i = 0; i < size; i++)
         {
             cout << key[i] << "\t";
+        }
+        cout << endl;
+    }
+
+    void printVertical()
+    {
+        for (int i = 0; i < size; i++)
+        {
+            cout << "Index Keys " << i + 1 << ": " << key[i] << endl;
         }
         cout << endl;
     }
@@ -120,7 +127,6 @@ public:
 
     ~Bucket()
     {
-        // TODO: fix delete
         //delete[] ptr;
     }
 };
@@ -150,8 +156,6 @@ public:
 
     ~BPlusTree()
     {
-        // TODO: this might be improper deletion
-        // did not run through the whole tree and delete child nodes
         //delete root;
     }
 
@@ -223,7 +227,6 @@ public:
         // if record is bigger than the current last key
         if (!is_set)
         {
-
             // create a new bucket to store record
             Bucket* nb = new Bucket(r->num_of_votes);
             num_of_buckets++;
@@ -244,7 +247,6 @@ public:
         Node* p = NULL;
 
         // advances down all levels of tree
-        // TODO: try find alternative to goto
         loop:
         while (!(*n)->isLeaf)
         {
@@ -256,7 +258,6 @@ public:
                 {
                     (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
                     goto loop;
-                    //break;
                 }
             }
 
@@ -271,7 +272,10 @@ public:
         return p;
     }
 
-	Node* searchAndPrintExperimentThree(Node** n, int key)
+    // searches for leaf node with given key
+    // prints out first 5 nodes accessed
+    // returns total num of nodes accessed
+	int searchAndPrintLeafNode(Node** n, int key)
     {
         Node* p = NULL;
         Node* nodeArray[5];
@@ -279,7 +283,6 @@ public:
         int totalNodeCounter = 0;
 
         // advances down all levels of tree
-        // TODO: try find alternative to goto
         loop:
         while (!(*n)->isLeaf)
         {
@@ -297,7 +300,6 @@ public:
                 {
                     (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
 					goto loop;
-                    //break;
                 }
             }
 
@@ -329,8 +331,7 @@ public:
             cout << endl;
         }
 
-        cout << "Total Nodes Accessed: " << totalNodeCounter << "\n" <<endl;
-        return p;
+        return totalNodeCounter;
     }
 
 	// searches through node recursively to get left leaf sibling of record
@@ -340,7 +341,6 @@ public:
         Node* p = NULL;
 
         // advances down all levels of tree
-        // TODO: try find alternative to goto
 		loop:
         while (!(*n)->isLeaf)
         {
@@ -351,7 +351,6 @@ public:
                 {
                     (*n) = reinterpret_cast<Node*>((*n)->ptr[i+1]);
 					goto loop;
-                    //break;
                 }
             }
 
@@ -361,7 +360,7 @@ public:
             {
                 // record is smaller than the first key
                 (*n) = reinterpret_cast<Node*>((*n)->ptr[0]);
-				}
+			}
         }
         return p;
     }
@@ -375,7 +374,6 @@ public:
         int totalNodeCounter = 0;
 
         // advances down all levels of tree
-        // TODO: try find alternative to goto
         loop:
         while (!(*n)->isLeaf)
         {
@@ -393,7 +391,6 @@ public:
                 {
                     (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
                     goto loop;
-                    //break;
                 }
             }
 
@@ -417,10 +414,8 @@ public:
 
         for(int i = 0; i < nodeCounter; i++)
         {
-            // cout << "\n- Node " << i+1 << " -" << endl;
             for(int j = 0; j < nodeArray[i]->size; j++)
             {
-                // cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << endl;
                 if(key == nodeArray[i]->key[j])
                 {
                     containKey = true;
@@ -794,7 +789,9 @@ public:
                 // creating a new leaf node and splitting records equally
                 Node* n = new Node();
                 num_of_nodes++;
+                uintptr_t right_ptr = curr->ptr[N];
                 curr->ptr[N] = (uintptr_t)n;
+                n->ptr[N] = right_ptr;
                 n->isLeaf = true;
 
                 Node* t; int input_pos;
@@ -851,9 +848,10 @@ public:
         if(!print)
             searchForLeafNodeWithKey(&curr, key);
         else
-            searchAndPrintExperimentThree(&curr, key);
-        /*if (!curr)
-            return NULL;*/
+        {
+            int totalNodeCounter = searchAndPrintLeafNode(&curr, key);
+            cout << "Total Nodes Accessed: " << totalNodeCounter << endl << endl;
+        }
 
         for (int i = 0; i < curr->size; i++)
         {
@@ -874,7 +872,6 @@ public:
         // if key_pos is -1 (no key, ptr is first ptr[0])
         // need to loop on parent until key_pos >= 0
         // if found parent with key_pos >= 0, update key
-        // if hit root on loop, update root key
         if (key_pos != -1)
         {
             p->key[key_pos] = new_key;
@@ -955,13 +952,10 @@ public:
 
         while (n->size < min_key_in_nonleaf)
         {
-            cout << "NEED MERGE/BORROW PARENT NODES" << endl;
-
             if (n == root)
             {
                 if (n->size == 0)
                 {
-                    cout << "ROOT GOT DELETED!" << endl;
                     root = reinterpret_cast<Node*>(root->ptr[0]);
                     height--;
                 }
@@ -1143,9 +1137,6 @@ public:
         // parent of leaf node
         Node* p = searchForLeafNodeWithKey(&curr, key);
 
-        /*if (!curr)
-            return NULL;*/
-
         // bucket position
         int delete_pos = 0;
         for (delete_pos = 0; delete_pos < curr->size; delete_pos++)
@@ -1161,20 +1152,9 @@ public:
         if(!b)
             return false;
 
-        // TODO: Update parents and merge nodes based on scenarios
-        // 3 scenarios:
-        //  1. Simple deletion (leaf node still hits minimum num of keys after deletion)
-        //      Need to update parent if left most key affected
-        //  2. Borrow key from sibling (leaf node lacks min keys, borrows from sibling that has more than min keys)
-        //      Needs to update parent after borrow and loop
-        //  3. Merge with sibling (leaf node lacks min keys, sibling only has min keys)
-        //      Needs to update parent after merge and loop
-
         // Simple deletion
         if (curr == root || curr->size - 1 >= min_key_in_leaf)
         {
-            cout << "SIMPLE DELETION" << endl;
-
             // delete bucket from node
             for (int i = curr->size - 1; i > delete_pos; i--)
             {
@@ -1215,9 +1195,6 @@ public:
 
             if (sl && sl->size-1 >= min_key_in_leaf)
             {
-                // borrow from left sibling
-                cout << "BORROWING FROM LEFT" << endl;
-
                 // delete bucket from node
                 for (int i = curr->size - 1; i > delete_pos; i--)
                 {
@@ -1249,9 +1226,6 @@ public:
             }
             else if (sr && sr->size-1 >= min_key_in_leaf)
             {
-                // borrow from right sibling
-                cout << "BORROWING FROM RIGHT" << endl;
-
                 // delete bucket from node
                 for (int i = curr->size - 1; i > delete_pos; i--)
                 {
@@ -1284,9 +1258,6 @@ public:
             }
             else
             {
-                // merge with sibling node
-                cout << "MERGING" << endl;
-
                 // delete bucket from node
                 for (int i = curr->size - 1; i > delete_pos; i--)
                 {
@@ -1301,8 +1272,6 @@ public:
                 // merge with left sibling
                 if (p == getLeafParent(root, sl))
                 {
-                    cout << "MERGE WITH LEFT" << endl;
-
                     // store position of curr key in parent for updating
                     int k = getKeyPositionInNode(p, curr->key[0]);
 
@@ -1339,8 +1308,6 @@ public:
                 // merge with right sibling
                 else if (p == getLeafParent(root, sr))
                 {
-                    cout << "MERGE WITH RIGHT" << endl;
-
                     // store position of sr key in parent for updating
                     int k = getKeyPositionInNode(p, sr->key[0]);
 
@@ -1388,52 +1355,27 @@ public:
         return true;
     }
 
-    // get the bucket with given key range
-    Bucket* getBucketRange(int key, bool print)
-    {
-        if (!root)
-            return NULL;
-
-        Node* curr = root;
-
-        if(!print)
-            searchForLeafNodeWithKey(&curr, key);
-        else
-            searchAndPrintExperimentFour(&curr, key);
-        /*if (!curr)
-            return NULL;*/
-
-        for (int i = 0; i < curr->size; i++)
-        {
-            // returns record if key match
-            if (key == curr->key[i])
-                return reinterpret_cast<Bucket*>(curr->ptr[i]);
-        }
-
-        return NULL;
-    }
-
-// TODO: remove references etc
-// from https://www.programiz.com/dsa/b-plus-tree
-#pragma region Referenced from online
-
     Node* getParentNode(Node* tree, Node* child)
     {
-        Node* parent = NULL;
-        if (tree->isLeaf || reinterpret_cast<Node*>(tree->ptr[0])->isLeaf)
-            return NULL;
-        for (int i = 0; i <= tree->size; i++) {
-            if ((reinterpret_cast<Node*>(tree->ptr[i])) == child) {
-                parent = tree;
-                return parent;
-            }
-            else {
-                parent = getParentNode(reinterpret_cast<Node*>(tree->ptr[i]), child);
-                if (parent)
-                    return parent;
-            }
-        }
-        return parent;
+		Node* parent = NULL;
+		if (tree->isLeaf || reinterpret_cast<Node*>(tree->ptr[0])->isLeaf)
+			return NULL;
+
+		for (int i = 0; i <= tree->size; i++)
+        {
+			if ((reinterpret_cast<Node*>(tree->ptr[i])) == child)
+            {
+				parent = tree;
+				return parent;
+			}
+			else
+            {
+				parent = getParentNode(reinterpret_cast<Node*>(tree->ptr[i]), child);
+				if (parent)
+					return parent;
+			}
+		}
+		return parent;
     }
 
     Node* getLeafParent(Node* tree, Node* child)
@@ -1441,12 +1383,16 @@ public:
         Node* parent = NULL;
         if (tree->isLeaf)
             return NULL;
-        for (int i = 0; i <= tree->size; i++) {
-            if ((reinterpret_cast<Node*>(tree->ptr[i])) == child) {
+
+        for (int i = 0; i <= tree->size; i++)
+        {
+            if ((reinterpret_cast<Node*>(tree->ptr[i])) == child)
+            {
                 parent = tree;
                 return parent;
             }
-            else {
+            else
+            {
                 parent = getLeafParent(reinterpret_cast<Node*>(tree->ptr[i]), child);
                 if (parent)
                     return parent;
@@ -1478,8 +1424,6 @@ public:
             }
         }
     }
-
-#pragma endregion
 
 };
 
@@ -1565,19 +1509,13 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
 
 void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
 {
-    // testing retrieval of records based on key
     // Experiment 3
     cout << "\t- Experiment 3 -" << endl << endl;
 
     int k = 500;
-//    int k = 30;
-
-//    cout << "Movies with " << k << " votes:" << endl;
 
     float avg_rating = 0;
     float total_rating = 0;
-    Record* recArray[5];
-    int recCounter = 0;
 
     if (bpt->getBucket(k, false))
     {
@@ -1588,12 +1526,6 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
         {
             for (int i = 0; i < b->size; i++)
             {
-                //cout << "#" << bi << " | " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-                if (recCounter < 5)
-                {
-                    recArray[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                    recCounter++;
-                }
                 total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
                 bi++;
             }
@@ -1601,12 +1533,6 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
         }
         for (int i = 0; i < b->size; i++)
         {
-            //cout << "#" << bi << " | " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-            if (recCounter < 5)
-            {
-                recArray[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                recCounter++;
-            }
             total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
             bi++;
         }
@@ -1626,8 +1552,6 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
 
      for(int i = 0; i < BLOCKS_WITH_RECORDS; i++ )
      {
-         //cout << "Accessing Block: " << i+1 << endl;
-         //db = disk[i];
          for(int j = 0; j <disk[i].size; j++)
          {
              if (disk[i].records[j].num_of_votes == k)
@@ -1641,12 +1565,13 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
                         cout << "Record " << p + 1 << " tconst value: " << disk[i].records[p].id << endl;
                     }
                     cout << endl;
-                    //cout << "[" << j << "]\t tconst value: " << disk[i].records[j].id << "\t Average rating: " << disk[i].records[j].avg_rating << "\t Number of votes: " << disk[i].records[j].num_of_votes << endl;
                     o++;
+                    break;
                 }
              }
          }
      }
+<<<<<<< HEAD
     cout << "Total Data Blocks accessed: " << totalBlocksAccessed << endl;
 //    cout << "\nData Block accessed: " << endl;
 //    for (int i = 0; i < recCounter; i++)
@@ -1668,133 +1593,112 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
 //            }
 //        }
 //    }
+=======
+    cout << "Total Data Block accessed: " << totalBlocksAccessed << endl;
+>>>>>>> 811b7eef523980eae07f22e36c7b14e9616583b3
 
     // the average of averageRatings of the records that are returned
-    cout << "\nAverage Rating =  " << avg_rating << endl;
+    cout << "Average Rating =  " << avg_rating << endl;
 }
 
 void Experiment4(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
 {
-    // Experiment 4 - Retrieval of records with a range of keys
-    //TODO:
+    cout << "\t- Experiment 4 - " << endl << endl;
 
-    cout << "\n\t- Experiment 4 - " << endl;
-    //cout << "Number and Content of the Index Nodes the Process Accesses: " << endl;
+    int min = 30000;
+    int max = 40000;
+    float total_rating = 0.0;
+    int num_of_records = 0;
+    int nodes_accessed = 0;
+    int buckets_accessed = 0;
+    int blocks_accessed = 0;
 
-    int minNumOfVote = 30000;
-    int maxNumOfVote = 40000;
-    int range = minNumOfVote;
-    int avg_rating = 0;
-    int total_rating = 0;
-    Record* recArrayExp4[5];
-    int recCounter = 0;
+    cout << "Accessing records with numVotes ranging from " << min << " to " << max << endl;
+    cout << "Nodes Accessed: " << endl;
 
-    while ((range <= maxNumOfVote) == true)
+    Node* curr = bpt->root;
+    Bucket* b = NULL;
+    Bucket* n = NULL;
+    // set curr to leaf node with min value
+    nodes_accessed = bpt->searchAndPrintLeafNode(&curr, min) - 1;
+    bool first_leaf = true;
+
+    do
     {
-        if (bpt->getBucketRange(range, false))
+        nodes_accessed++;
+        for (int i = 0; i < curr->size; i++)
         {
-            Bucket* b = bpt->getBucketRange(range, false);
-            int bi = 1;
-
-            //cout << "Num of records per bucket: " << RECORDS_PER_BUCKET << "\n"<< endl;
-
-            while (b->overflowed)
+            if (min <= curr->key[i] && curr->key[i] <= max)
             {
-                for (int i = 0; i < b->size; i++)
+                b = reinterpret_cast<Bucket*>(curr->ptr[i]);
+
+                do
                 {
-                    //cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-                    if (recCounter < 5)
+                    buckets_accessed++;
+                    for (int j = 0; j < b->size; j++)
                     {
-                        recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                        recCounter++;
+                        total_rating += reinterpret_cast<Record*>(b->ptr[j])->avg_rating;
+                        num_of_records++;
                     }
-                    total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
-                    bi++;
-                }
-                b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+                } while (b->overflowed);
             }
-            for (int i = 0; i < b->size; i++)
+            else if(curr->key[i] > max)
             {
-                //cout << "#" << bi << ": " << reinterpret_cast<Record*>(b->ptr[i])->toString() << endl;
-                if (recCounter < 5)
-                {
-                    recArrayExp4[recCounter] = reinterpret_cast<Record*>(b->ptr[i]);
-                    recCounter++;
-                }
-                total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
-                bi++;
+                goto hit_maxed;
             }
-
-            avg_rating = total_rating / (bi - 1);
-
-            // divider
-            //cout << "\n";
         }
-        //else
-            //cout << "Record w NumOfVotes == " << range << " cannot be found !" << endl;
 
-        range++;
-    }
-
-
-    //reset the range
-    range = minNumOfVote;
-
-    // TODO: should the range be from 30k to 40k??
-    while ((range <= 30100) == true)
-    {
-//        cout << "\n Find number of vote: " << range << endl;
-        // the number and the content of index nodes the process accesses
-        bpt->getBucketRange(range, true);
-
-        range++;
-    }
-
-    // the number and the content of data blocks the process accesses
-    for (int i = 0; i < recCounter; i++)
-    {
-        for (int j = 0; j < BLOCKS_WITH_RECORDS; j++)
+        // print node if within 5
+        // might print first leaf node twice, may need to check
+        if (!first_leaf && nodes_accessed <= 5)
         {
-            for (int m = 0; m < RECORDS_PER_BLOCK; m++)
+            cout << "Node " << nodes_accessed << endl;
+            for (int i = 0; i < curr->size; i++)
             {
-                if (recArrayExp4[i]->id == disk[j].records[m].id)
-                {
-                    cout << "\nDisk Block " << j + 1 << endl;
+                cout << "Index Keys " << i + 1 << ": " << curr->key[i] << endl;
+            }
+            cout << endl;
+        }
 
+        first_leaf = false;
+        // access next leaf node
+        curr = reinterpret_cast<Node*>(curr->ptr[N]);
+    }
+    while (curr);
+
+hit_maxed:
+    cout << "Total Nodes Accessed: " << nodes_accessed << endl << endl;
+
+    int o = 0;
+    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+    {
+        for (int j = 0; j < disk[i].size; j++)
+        {
+            if (min <= disk[i].records[j].num_of_votes && disk[i].records[j].num_of_votes <= max)
+            {
+                blocks_accessed++;
+                if (o < 5)
+                {
+                    cout << "Data Block " << i + 1 << endl;
                     for (int p = 0; p < RECORDS_PER_BLOCK; p++)
                     {
-                        cout << "Record " << p + 1 << " tconst value: " << disk[j].records[p].id << endl;
+                        cout << "Record " << p + 1 << " tconst value: " << disk[i].records[p].id << endl;
                     }
+                    cout << endl;
+                    o++;
+                    break;
                 }
             }
         }
     }
+    cout << "Total Data Block accessed: " << blocks_accessed << endl;
+    cout << "Average Rating =  " << total_rating / num_of_records << endl;
 
-    // the average of averageRatings of the records that are returned
-    cout << "\nAverage Rating =  " << avg_rating << endl;
-
-
-
-    // the number and the content of data blocks the process accesses
-    // for(int i = 0; i <BLOCKS_WITH_RECORDS; i++ )
-    // {
-    //     // cout << "Accessing Block: " << i << endl;
-    //     //db = disk[i];
-
-    //     for(int j = 0; j <disk[i].size; j++)
-    //     {
-    //         if (disk[i].records[j].num_of_votes >= 30000 && disk[i].records[j].num_of_votes <= 40000)
-    //         {
-    //             cout << "Accessing Block: " << i << endl;
-    //             cout << "[" << j << "]\t tconst value: " << disk[i].records[j].id << "\t Average rating: " << disk[i].records[j].avg_rating << "\t Number of votes: " << disk[i].records[j].num_of_votes << endl;
-    //         }
-    //     }
-    // }
 }
 
 void Experiment5(BPlusTree* bpt)
 {
-    cout << "\n\tExperiment 5:" << endl << endl;
+    cout << "\tExperiment 5:" << endl << endl;
 
     int key = 1000;
     int nodes_b = bpt->num_of_nodes;
@@ -1821,13 +1725,13 @@ void Experiment5(BPlusTree* bpt)
 
     if (bpt->root)
     {
-        cout << "Root node:\t";
-        bpt->root->print();
+        cout << "\nRoot node:" << endl;
+        bpt->root->printVertical();
         Node* c = reinterpret_cast<Node*>(bpt->root->ptr[0]);
         if (c)
         {
-            cout << "Root node's first child:\t";
-            c->print();
+            cout << "Root node's first child:\n";
+            c->printVertical();
         }
         else
             cout << "ERROR: Root node's first child is NULL!" << endl;
@@ -1835,7 +1739,6 @@ void Experiment5(BPlusTree* bpt)
     else
         cout << "ERROR: Root node is NULL!" << endl;
 
-    //bpt->displayTree(bpt->root);
 }
 
 void Menu(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
@@ -1852,8 +1755,6 @@ void Menu(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
         cout << "Enter an option (1/2/3/4): ";
         cin >> input_i;
         cout << endl << endl;
-
-        // TODO: Error handling
 
         switch (input_i)
         {
@@ -1933,52 +1834,13 @@ int main()
 
     BPlusTree bpt;
 
-    // TODO: Remove on build and populate B+ tree with actual data
-    char input_c = NULL;
-    cout << "\nUse full dataset? (Y/N): ";
-    cin >> input_c;
-    cout << endl;
-
-    switch (input_c)
+    // populate B+ tree with actual data
+    for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
     {
-    case 'y':
-    case 'Y':
-        // populate B+ tree with actual data
-        for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
+        for (int j = 0; j < disk[i].size; j++)
         {
-            for (int j = 0; j < disk[i].size; j++)
-            {
-                //cout << "Record - " << disk[i].records[j].toString() << endl;
-                bpt.addRecord(&(disk[i].records[j]));
-            }
+            bpt.addRecord(&(disk[i].records[j]));
         }
-        break;
-    default:
-        // for testing/debugging
-        Record r1(4, 3.5, 10);
-        Record r2(9, 2.7, 20);
-        Record r3(214, 2.8, 30);
-        Record r4(13, 1.7, 40);
-        Record r5(2, 5.7, 50);
-        Record r6(8, 5.7, 60);
-        Record r7(7, 2.0, 70);
-        Record r8(1, 3.9, 80);
-        Record r9(214, 2.8, 90);
-        Record r10(23, 2.2, 100);
-        Record r11(23, 2.2, 35);
-
-        bpt.addRecord(&r1);
-        bpt.addRecord(&r2);
-        bpt.addRecord(&r3);
-        bpt.addRecord(&r4);
-        bpt.addRecord(&r5);
-        bpt.addRecord(&r6);
-        bpt.addRecord(&r7);
-        bpt.addRecord(&r8);
-        bpt.addRecord(&r9);
-        bpt.addRecord(&r10);
-        bpt.addRecord(&r11);
-        break;
     }
 
     cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
@@ -1986,13 +1848,13 @@ int main()
     cout << "Height of the B+ tree: " << bpt.height << endl;
     if (bpt.root)
     {
-        cout << "Root node:\t";
-        bpt.root->print();
+        cout << "\nRoot node:" << endl;
+        bpt.root->printVertical();
         Node* c = reinterpret_cast<Node*>(bpt.root->ptr[0]);
         if (c)
         {
-            cout << "Root node's first child:\t";
-            c->print();
+            cout << "Root node's first child:\n";
+            c->printVertical();
         }
         else
             cout << "ERROR: Root node's first child is NULL!" << endl;
@@ -2000,42 +1862,12 @@ int main()
     else
         cout << "ERROR: Root node is NULL!" << endl;
 
-    //bpt.displayTree(bpt.root);
-
 #pragma endregion
 
     // Menu
     Menu(&bpt, disk, BLOCKS_WITH_RECORDS);
 
-    // for debugging the database storage
-#pragma region debugging Disk_block
-
-    // for debugging
-//    int diskno = 0;
-//
-//    cout << "Input disk number to read records: ";
-//    // lazy do error checking and handling
-//    // must be 0 <= diskno < BLOCKS_WITH_RECORDS
-//    cin >> diskno;
-//
-//    while(diskno != -1)
-//    {
-//        cout << endl << "Disk " << diskno << ":" << endl;
-//        cout << "Disk id: " << disk[diskno-1].id << endl;
-//        for (int i = 0; i < RECORDS_PER_BLOCK; i++)
-//        {
-//            cout << disk[diskno-1].records[i].id << " :\t" << disk[diskno-1].records[i].avg_rating << "\t| " << disk[diskno-1].records[i].num_of_votes << endl;
-//        }
-//        cout << endl;
-//        cin >> diskno;
-//    }
-
-
-#pragma endregion
-
-
     // deletes memory from pointer
-    // might be improper delete, need to check
     delete[] disk;
 
     return 0;
