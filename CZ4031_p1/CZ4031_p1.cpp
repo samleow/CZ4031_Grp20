@@ -1124,7 +1124,7 @@ public:
                 // merge with left sibling
                 if (p == getLeafParent(root, sl))
                 {
-                    cout << "MERGE W LEFT" << endl;
+                    cout << "MERGE WITH LEFT" << endl;
 
                     // TODO:
 
@@ -1133,7 +1133,7 @@ public:
                 // merge with right sibling
                 else if (p == getLeafParent(root, sr))
                 {
-                    cout << "MERGE W RIGHT" << endl;
+                    cout << "MERGE WITH RIGHT" << endl;
 
                     // store position of key in parent for updating
                     int k = getKeyPositionInNode(p, sr->key[0]);
@@ -1170,7 +1170,7 @@ public:
                     // check if need loop merging of parent nodes
                     if (p->size < min_key_in_nonleaf)
                     {
-                        cout << "NEED MERGE PARENT NODES" << endl;
+                        cout << "NEED TO MERGE PARENT NODES" << endl;
 
                         // TODO: 
 
@@ -1180,7 +1180,7 @@ public:
                 }
                 else
                 {
-                    cout << "ERROR GETTING SIBLING TO MERGE !!" << endl;
+                    cout << "ERROR GETTING SIBLING TO MERGE!!!" << endl;
                 }
 
 
@@ -1415,7 +1415,7 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
         avg_rating = total_rating / (bi - 1);
     }
     else
-        cout << "Record w NumOfVotes == " << k << " cannot be found !" << endl;
+        cout << "Record with NumOfVotes == " << k << " cannot be found!" << endl;
 
     // the number and the content of index nodes the process accesses
     bpt->getBucket(k, true);
@@ -1684,6 +1684,7 @@ int main()
     switch (input_c)
     {
     case 'Y':
+    case 'y':
         // populate B+ tree with actual data
         for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
         {

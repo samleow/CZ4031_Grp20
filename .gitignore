@@ -65,3 +65,5 @@ bld/
 *.out
 *.app
 
+# Temporary files
+*.tmp
