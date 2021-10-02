@@ -14,7 +14,7 @@ using namespace std;
 #define BLOCKS_IN_DISK      (DISK_SIZE/BLOCK_SIZE)
 #define RECORD_SIZE         sizeof(Record)
 #define RECORDS_PER_BLOCK   ((BLOCK_SIZE-2*sizeof(int))/RECORD_SIZE)
-#define POINTER_SIZE        sizeof(uintptr_t)//4
+#define POINTER_SIZE        sizeof(uintptr_t)
 #define DATA_FILE           "data.tsv"
 const static int N =        floor((BLOCK_SIZE - POINTER_SIZE) / (POINTER_SIZE + sizeof(int)));
 #define RECORDS_PER_BUCKET  ((BLOCK_SIZE - (2*sizeof(int) + sizeof(bool)))/sizeof(uintptr_t) - 1)
@@ -1571,31 +1571,8 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
              }
          }
      }
-<<<<<<< HEAD
+
     cout << "Total Data Blocks accessed: " << totalBlocksAccessed << endl;
-//    cout << "\nData Block accessed: " << endl;
-//    for (int i = 0; i < recCounter; i++)
-//    {
-//        for (int j = 0; j < BLOCKS_WITH_RECORDS; j++)
-//        {
-//            for (int m = 0; m < RECORDS_PER_BLOCK; m++)
-//            {
-//                if (recArray[i]->id == disk[j].records[m].id)
-//                {
-//                    cout << "Data Block " << j + 1 << endl;
-//
-//                    for (int p = 0; p < RECORDS_PER_BLOCK; p++)
-//                    {
-//                        cout << "Record " << p + 1 << " tconst value: " << disk[j].records[p].id << endl;
-//                    }
-//                    cout << endl;
-//                }
-//            }
-//        }
-//    }
-=======
-    cout << "Total Data Block accessed: " << totalBlocksAccessed << endl;
->>>>>>> 811b7eef523980eae07f22e36c7b14e9616583b3
 
     // the average of averageRatings of the records that are returned
     cout << "Average Rating =  " << avg_rating << endl;
