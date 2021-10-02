@@ -1647,7 +1647,7 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
              }
          }
      }
-    cout << "Total Data Block accessed: " << totalBlocksAccessed << endl;
+    cout << "Total Data Blocks accessed: " << totalBlocksAccessed << endl;
 //    cout << "\nData Block accessed: " << endl;
 //    for (int i = 0; i < recCounter; i++)
 //    {

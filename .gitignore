@@ -67,3 +67,4 @@ bld/
 
 # Temporary files
 *.tmp
+~$*.*
