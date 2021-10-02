@@ -1213,18 +1213,6 @@ public:
             // sibling's parent
             Node* sp = NULL;
 
-            // TODO: delete debugging
-            if (sl)
-            {
-                cout << "sl\t";
-                sl->print();
-            }
-            if (sr)
-            {
-                cout << "sr\t";
-                sr->print();
-            }
-
             if (sl && sl->size-1 >= min_key_in_leaf)
             {
                 // borrow from left sibling
@@ -1808,7 +1796,11 @@ void Experiment5(BPlusTree* bpt)
 {
     cout << "\n\tExperiment 5:" << endl << endl;
 
-    int key = 70;
+    int key = 1000;
+    int nodes_b = bpt->num_of_nodes;
+    int bucket_b = bpt->num_of_buckets;
+
+    cout << "Deleting records with numVotes of " << key << endl;
 
     // delete records
     if (bpt->deleteRecord(key))
@@ -1821,9 +1813,27 @@ void Experiment5(BPlusTree* bpt)
     }
 
     // display results
+    cout << "Number of nodes deleted: " << nodes_b - bpt->num_of_nodes << endl;
+    cout << "Number of buckets deleted: " << bucket_b - bpt->num_of_buckets << endl;
     cout << "Number of nodes in the B+ tree: " << bpt->num_of_nodes << endl;
     cout << "Number of buckets in the B+ tree: " << bpt->num_of_buckets << endl;
     cout << "Height of the B+ tree: " << bpt->height << endl;
+
+    if (bpt->root)
+    {
+        cout << "Root node:\t";
+        bpt->root->print();
+        Node* c = reinterpret_cast<Node*>(bpt->root->ptr[0]);
+        if (c)
+        {
+            cout << "Root node's first child:\t";
+            c->print();
+        }
+        else
+            cout << "ERROR: Root node's first child is NULL!" << endl;
+    }
+    else
+        cout << "ERROR: Root node is NULL!" << endl;
 
     //bpt->displayTree(bpt->root);
 }
@@ -1974,6 +1984,21 @@ int main()
     cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
     cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
     cout << "Height of the B+ tree: " << bpt.height << endl;
+    if (bpt.root)
+    {
+        cout << "Root node:\t";
+        bpt.root->print();
+        Node* c = reinterpret_cast<Node*>(bpt.root->ptr[0]);
+        if (c)
+        {
+            cout << "Root node's first child:\t";
+            c->print();
+        }
+        else
+            cout << "ERROR: Root node's first child is NULL!" << endl;
+    }
+    else
+        cout << "ERROR: Root node is NULL!" << endl;
 
     //bpt.displayTree(bpt.root);
 
