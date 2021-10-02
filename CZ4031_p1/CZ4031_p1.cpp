@@ -1112,6 +1112,24 @@ public:
         }
     }
 
+    void deleteFullBucket(Bucket** b)
+    {
+        Bucket* curr = *b;
+        Bucket* next = NULL;
+        while (curr != NULL)
+        {
+            if (curr->ptr[RECORDS_PER_BUCKET])
+                next = reinterpret_cast<Bucket*>(curr->ptr[RECORDS_PER_BUCKET]);
+            else
+                next = NULL;
+
+            delete curr;
+            num_of_buckets--;
+            curr = next;
+        }
+        *b = NULL;
+    }
+
     // deletes all records with given key
     // returns true if bucket of records found and successfully deleted
     bool deleteRecord(int key)
@@ -1166,8 +1184,7 @@ public:
             curr->key[curr->size - 1] = NULL;
             curr->ptr[curr->size - 1] = NULL;
             curr->size--;
-            delete b;
-            num_of_buckets--;
+            deleteFullBucket(&b);
             
             if (curr->size == 0)
             {
@@ -1222,8 +1239,7 @@ public:
                 curr->key[curr->size - 1] = NULL;
                 curr->ptr[curr->size - 1] = NULL;
                 curr->size--;
-                delete b;
-                num_of_buckets--;
+                deleteFullBucket(&b);
 
                 // shifting curr node keys
                 for (int i = curr->size; i > 0; i--)
@@ -1257,8 +1273,7 @@ public:
                 curr->key[curr->size - 1] = NULL;
                 curr->ptr[curr->size - 1] = NULL;
                 curr->size--;
-                delete b;
-                num_of_buckets--;
+                deleteFullBucket(&b);
 
                 // transferring sibling key
                 curr->key[curr->size] = sr->key[0];
@@ -1293,8 +1308,7 @@ public:
                 curr->key[curr->size - 1] = NULL;
                 curr->ptr[curr->size - 1] = NULL;
                 curr->size--;
-                delete b;
-                num_of_buckets--;
+                deleteFullBucket(&b);
 
                 // merge with left sibling
                 if (p == getLeafParent(root, sl))
@@ -1794,15 +1808,24 @@ void Experiment5(BPlusTree* bpt)
 {
     cout << "\n\tExperiment 5:" << endl << endl;
 
+    int key = 70;
+
     // delete records
-    bpt->deleteRecord(70);
+    if (bpt->deleteRecord(key))
+    {
+        cout << "Records deleted successfully!" << endl;
+    }
+    else
+    {
+        cout << "Record not found!" << endl;
+    }
 
     // display results
     cout << "Number of nodes in the B+ tree: " << bpt->num_of_nodes << endl;
     cout << "Number of buckets in the B+ tree: " << bpt->num_of_buckets << endl;
     cout << "Height of the B+ tree: " << bpt->height << endl;
 
-    bpt->displayTree(bpt->root);
+    //bpt->displayTree(bpt->root);
 }
 
 void Menu(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
