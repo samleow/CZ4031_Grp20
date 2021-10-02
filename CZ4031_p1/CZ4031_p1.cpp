@@ -31,6 +31,7 @@ struct Record
         avg_rating = -1.0f;
         num_of_votes = -1;
     }
+    
     Record(int id, float avg_rating, int num_of_votes)
     {
         this->id = id;
@@ -1571,31 +1572,7 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
              }
          }
      }
-<<<<<<< HEAD
-    cout << "Total Data Blocks accessed: " << totalBlocksAccessed << endl;
-//    cout << "\nData Block accessed: " << endl;
-//    for (int i = 0; i < recCounter; i++)
-//    {
-//        for (int j = 0; j < BLOCKS_WITH_RECORDS; j++)
-//        {
-//            for (int m = 0; m < RECORDS_PER_BLOCK; m++)
-//            {
-//                if (recArray[i]->id == disk[j].records[m].id)
-//                {
-//                    cout << "Data Block " << j + 1 << endl;
-//
-//                    for (int p = 0; p < RECORDS_PER_BLOCK; p++)
-//                    {
-//                        cout << "Record " << p + 1 << " tconst value: " << disk[j].records[p].id << endl;
-//                    }
-//                    cout << endl;
-//                }
-//            }
-//        }
-//    }
-=======
     cout << "Total Data Block accessed: " << totalBlocksAccessed << endl;
->>>>>>> 811b7eef523980eae07f22e36c7b14e9616583b3
 
     // the average of averageRatings of the records that are returned
     cout << "Average Rating =  " << avg_rating << endl;
@@ -1842,7 +1819,6 @@ int main()
             bpt.addRecord(&(disk[i].records[j]));
         }
     }
-
     cout << "Number of nodes in the B+ tree: " << bpt.num_of_nodes << endl;
     cout << "Number of buckets in the B+ tree: " << bpt.num_of_buckets << endl;
     cout << "Height of the B+ tree: " << bpt.height << endl;
