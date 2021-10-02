@@ -893,6 +893,18 @@ public:
         return -1;
     }
 
+    // returns the node position in the parent
+    // if node not found, returns -1
+    int getNodePositionInParent(Node* p, Node* n)
+    {
+        for (int i = 0; i < p->size; i++)
+        {
+            if (n = reinterpret_cast<Node*>(p->ptr[i]))
+                return i;
+        }
+        return -1;
+    }
+
     // returns the sibling nodes of child node
     tuple<Node*, Node*> getLeafSiblings(Node* p, Node* c)
     {
@@ -921,6 +933,176 @@ public:
                 sl = NULL;
 
             return make_tuple(sl, sr);
+        }
+    }
+
+    // updates parent nodes recursively if parent node lacks min size
+    void deleteParentUpdate(Node* n)
+    {
+        // parent
+        Node* p = NULL;
+        // sibling
+        Node* s = NULL;
+        // position of n in p
+        int n_pos = -1;
+        bool can_borrow = false;
+
+        while (n->size < min_key_in_nonleaf)
+        {
+            cout << "NEED MERGE/BORROW PARENT NODES" << endl;
+
+            if (n == root)
+            {
+                if (n->size == 0)
+                {
+                    cout << "ROOT GOT DELETED!" << endl;
+                    root = reinterpret_cast<Node*>(root->ptr[0]);
+                    height--;
+                }
+                break;
+            }
+
+            //get parent
+            p = getParentNode(root, n);
+
+            // check if can borrow from sibling
+            // if borrow, can break
+            // else need to merge, and loop
+            n_pos = getNodePositionInParent(p, n);
+            // get sibling
+            if (n_pos > 0)
+            {
+                s = reinterpret_cast<Node*>(p->ptr[n_pos - 1]);
+                // if left sibling have extra key to borrow
+                if (s->size - 1 >= min_key_in_nonleaf)
+                    can_borrow = true;
+            }
+            else
+            {
+                s = reinterpret_cast<Node*>(p->ptr[n_pos + 1]);
+                // if right sibling have extra key to borrow
+                if (s->size - 1 >= min_key_in_nonleaf)
+                    can_borrow = true;
+            }
+            if (can_borrow)
+            {
+                // sibling on left
+                if (n_pos > 0)
+                {
+                    // shifting n node keys
+                    n->ptr[n->size + 1] = n->ptr[n->size];
+                    for (int i = n->size; i > 0; i--)
+                    {
+                        n->key[i] = n->key[i - 1];
+                        n->ptr[i] = n->ptr[i - 1];
+                    }
+                    // transferring parent key into n
+                    n->key[0] = p->key[n_pos - 1];
+                    n->ptr[0] = s->ptr[s->size];
+                    n->size++;
+                    // deleting last key in sibling
+                    int k = s->key[s->size - 1];
+                    s->key[s->size - 1] = NULL;
+                    s->ptr[s->size] = NULL;
+                    s->size--;
+
+                    // update parent keys
+                    changeKeyParentUpdate(p, p->key[n_pos - 1], k);
+                }
+                // sibling on right
+                else
+                {
+                    // transferring parent key into n
+                    n->key[n->size] = p->key[n_pos];
+                    n->ptr[n->size+1] = s->ptr[0];
+                    n->size++;
+                    // shifting sibling node keys
+                    for (int i = 0; i < s->size - 1; i++)
+                    {
+                        s->key[i] = s->key[i + 1];
+                        s->ptr[i] = s->ptr[i + 1];
+                    }
+                    // shifting last sibling pointer
+                    s->ptr[s->size - 1] = s->ptr[s->size];
+                    // deleting last key in sibling
+                    s->key[s->size - 1] = NULL;
+                    s->ptr[s->size] = NULL;
+                    s->size--;
+
+                    // update parent keys
+                    changeKeyParentUpdate(p, p->key[n_pos], s->key[0]);
+                }
+
+                // end loop
+                return;
+            }
+
+            // merge with sibling nodes
+            // sibling on left
+            if (n_pos > 0)
+            {
+                // move parent key down to s
+                s->key[s->size] = p->key[n_pos];
+                s->size++;
+
+                // shift parent keys to the left by 1 and size minus 1
+                for (int i = n_pos; i < p->size - 1; i++)
+                {
+                    p->key[i] = p->key[i + 1];
+                    p->ptr[i + 1] = p->ptr[i + 2];
+                }
+                p->size--;
+
+                // move all keys from ptr n to s
+                for (int i = 0; i < n->size; i++)
+                {
+                    s->key[s->size] = n->key[i];
+                    s->ptr[s->size] = n->ptr[i];
+                    s->size++;
+                }
+                s->ptr[s->size] = n->ptr[n->size];
+
+                // delete n
+                delete[] n->key;
+                delete[] n->ptr;
+                delete n;
+                num_of_nodes--;
+            }
+            // sibling on right
+            else
+            {
+                // move parent key down to n node
+                n->key[n->size] = p->key[0];
+                n->size++;
+
+                // shift parent keys to the left by 1 and size minus 1
+                for (int i = 0; i < p->size - 1; i++)
+                {
+                    p->key[i] = p->key[i + 1];
+                    p->ptr[i + 1] = p->ptr[i + 2];
+                }
+                p->size--;
+
+                // move all keys and ptrs from s to n
+                for (int i=0; i < s->size; i++)
+                {
+                    n->key[n->size] = s->key[i];
+                    n->ptr[n->size] = s->ptr[i];
+                    n->size++;
+                }
+                n->ptr[n->size] = s->ptr[s->size];
+
+                // delete s
+                delete[] s->key;
+                delete[] s->ptr;
+                delete s;
+                num_of_nodes--;
+            }
+
+            // reset can_borrow
+            can_borrow = false;
+            //loop parent
+            n = p;
         }
     }
 
@@ -965,7 +1147,7 @@ public:
         //      Needs to update parent after merge and loop
 
         // Simple deletion
-        if (curr->size - 1 >= min_key_in_leaf)
+        if (curr == root || curr->size - 1 >= min_key_in_leaf)
         {
             cout << "SIMPLE DELETION" << endl;
 
@@ -980,26 +1162,18 @@ public:
             curr->size--;
             delete b;
             num_of_buckets--;
-
-            // if whole node is deleted, eg. N = 2
+            
             if (curr->size == 0)
             {
-                // if curr is the only node in the tree
-                if (curr == root)
-                {
-                    // delete whole tree
-                    delete[] curr->key;
-                    delete[] curr->ptr;
-                    delete curr;
-                    root = NULL;
-                    return true;
-                }
-
-                // TODO: delete leaf node and update parents
-                // might need to recursively update parents as parent nodes may merge as well
-                // might need to set root as well
-
-
+                // delete tree
+                cout << "Tree deleted!" << endl;
+                delete[] root->key;
+                delete[] root->ptr;
+                delete root;
+                num_of_nodes = 0;
+                num_of_buckets = 0;
+                height = 0;
+                return true;
             }
             // if the first key of the leaf node is deleted
             if (delete_pos == 0)
@@ -1008,7 +1182,6 @@ public:
                 changeKeyParentUpdate(p, key, curr->key[0]);
             }
         }
-        // Borrow key from sibling
         else
         {
             // sibling nodes
@@ -1017,7 +1190,7 @@ public:
             // sibling's parent
             Node* sp = NULL;
 
-            // debugging
+            // TODO: delete debugging
             if (sl)
             {
                 cout << "sl\t";
@@ -1047,10 +1220,10 @@ public:
                 num_of_buckets--;
 
                 // shifting curr node keys
-                for (int i = 0; i < curr->size; i++)
+                for (int i = curr->size; i > 0; i--)
                 {
-                    curr->key[i + 1] = curr->key[i];
-                    curr->ptr[i + 1] = curr->ptr[i];
+                    curr->key[i] = curr->key[i-1];
+                    curr->ptr[i] = curr->ptr[i-1];
                 }
                 // transferring sibling key
                 curr->key[0] = sl->key[sl->size-1];
@@ -1117,28 +1290,53 @@ public:
                 delete b;
                 num_of_buckets--;
 
-                // TODO: merging of nodes
-                // might need to recursively update parents as parent nodes may merge as well
-                // might need to set root as well
-
                 // merge with left sibling
                 if (p == getLeafParent(root, sl))
                 {
                     cout << "MERGE W LEFT" << endl;
 
-                    // TODO:
+                    // store position of curr key in parent for updating
+                    int k = getKeyPositionInNode(p, curr->key[0]);
 
+                    // shift curr keys over to sl
+                    for (int i = 0; i < curr->size; i++)
+                    {
+                        sl->key[sl->size] = curr->key[i];
+                        sl->ptr[sl->size] = curr->ptr[i];
+                        sl->size++;
+                    }
 
+                    // link sl to sr
+                    sl->ptr[N] = curr->ptr[N];
+
+                    // delete curr node
+                    delete[] curr->key;
+                    delete[] curr->ptr;
+                    delete curr;
+                    num_of_nodes--;
+
+                    // shift all parent's key after curr to the left
+                    for (int i = k; i < p->size - 1; i++)
+                    {
+                        p->key[i] = p->key[i + 1];
+                        p->ptr[i + 1] = p->ptr[i + 2];
+                    }
+                    p->key[p->size - 1] = NULL;
+                    p->ptr[p->size] = NULL;
+                    p->size--;
+
+                    // need to further update parent keys
+                    changeKeyParentUpdate(p, key, sl->key[0]);
                 }
                 // merge with right sibling
                 else if (p == getLeafParent(root, sr))
                 {
                     cout << "MERGE W RIGHT" << endl;
 
-                    // store position of key in parent for updating
+                    // store position of sr key in parent for updating
                     int k = getKeyPositionInNode(p, sr->key[0]);
 
-                    // shift right sibling keys over to curr
+                    // shift sr keys over to curr
                     for (int i = 0; i < sr->size; i++)
                     {
                         curr->key[curr->size] = sr->key[i];
@@ -1146,15 +1344,16 @@ public:
                         curr->size++;
                     }
 
-                    // link curr to right sibling's right sibling
+                    // link curr to sr's right sibling
                     curr->ptr[N] = sr->ptr[N];
 
-                    // delete right sibling node
+                    // delete sr node
                     delete[] sr->key;
                     delete[] sr->ptr;
                     delete sr;
+                    num_of_nodes--;
 
-                    // shift all parent's key after right sibling to the left
+                    // shift all parent's key after sr to the left
                     for (int i = k; i < p->size - 1; i++)
                     {
                         p->key[i] = p->key[i + 1];
@@ -1166,16 +1365,6 @@ public:
 
                     // need to further update parent keys
                     changeKeyParentUpdate(p, key, curr->key[0]);
-                    
-                    // check if need loop merging of parent nodes
-                    if (p->size < min_key_in_nonleaf)
-                    {
-                        cout << "NEED MERGE PARENT NODES" << endl;
-
-                        // TODO: 
-
-
-                    }
 
                 }
                 else
@@ -1183,12 +1372,15 @@ public:
                     cout << "ERROR GETTING SIBLING TO MERGE !!" << endl;
                 }
 
+                // update parent nodes (merging/borrowing keys)
+                deleteParentUpdate(p);
 
             }
         }
 
         return true;
     }
+
     // get the bucket with given key range
     Bucket* getBucketRange(int key, bool print)
     {
@@ -1683,6 +1875,7 @@ int main()
 
     switch (input_c)
     {
+    case 'y':
     case 'Y':
         // populate B+ tree with actual data
         for (int i = 0; i < BLOCKS_WITH_RECORDS; i++)
