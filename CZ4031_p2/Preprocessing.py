@@ -51,7 +51,7 @@ class Preprocessing:
 
   def executeExplainQuery(self, queryText):
 
-    self.cur.execute("EXPLAIN " + queryText)
+    self.cur.execute("EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) " + queryText)
     display = self.cur.fetchone()
     print(display)
 
