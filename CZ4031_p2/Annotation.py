@@ -1,6 +1,7 @@
 import queue
 import json
 import copy
+import re
 
 class Node(object):
     def __init__(self, node_type, relation_name, schema, alias, group_key, sort_key, join_type, index_name,
@@ -206,8 +207,7 @@ def to_text(node, skip=False):
                     step += (" and table " + child.get_output_name())
             # combine hash with hash join
             # step = "hash table " + hashed_table + step + " under condition " + "hash cond"
-            step = "hash table " + hashed_table + step + " under condition " + \
-                   node.hash_cond.replace("::text", "") + "."
+            step = "hash table " + hashed_table + step + " under condition " + node.hash_cond.replace("::text", "")
 
         elif "Merge" in node.node_type:
             step += "perform " + node.node_type.lower() + " on "
@@ -286,11 +286,12 @@ def to_text(node, skip=False):
 
     elif node.node_type == "Sort":
         step += "perform sort on table "
-        if "DESC" in node.sort_key:
-            step += node.sort_key.replace('DESC', '') + " in decreasing order "
-        elif "INC" in node.sort_key:
-            step += node.sort_key.replace('INC', '') + " in increasing order "
-
+        step += node.children[0].get_output_name()
+        node_sort_key_str = ''.join(node.sort_key)
+        if "DESC" in node_sort_key_str:
+            step += " with attribute " + node_sort_key_str.replace('DESC', '') + "in a descending order"
+        else:
+            step += " with attribute " + node_sort_key_str
         # step += "perform sort on table "
         # if len(node.sort_key) == 1:
         #     step += node.sort_key[0].replace("::text", "")
@@ -326,9 +327,16 @@ def to_text(node, skip=False):
                 step += i.replace("::text", "") + ", "
             step += node.group_key[-1].replace("::text", "")
     if node.table_filter:
-        step += " and filtering on " + node.table_filter.replace(":::text", "")
+        #step += " and filtering on " + node.table_filter.replace(":::text", "")
+        #sep = "'"
+        #step += " and filtering on " + sep.join(node.table_filter.split(sep)[:-1]) + "')"
+        if ":" not in node.table_filter:
+            node.table_filter = node.table_filter[:-1]
+        step += " and filtering on " + re.sub("\:[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
     if node.join_filter:
-        step += " while filtering on " + node.join_filter.replace(":::text", "")
+        if ":" not in node.table_filter:
+            node.table_filter = node.table_filter[:-1]
+        step += " while filtering on " + re.sub("\:[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
 
         # set intermediate table name
     if increment:

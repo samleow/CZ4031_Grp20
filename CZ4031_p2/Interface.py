@@ -12,7 +12,8 @@ class BuildWindow(tk.Tk):
   portTxt = 5432
   dbNametxt = "TPC-H"
   usernameTxt = "postgres"
-  passwordTxt = "password"
+  #passwordTxt = "password"
+  passwordTxt = "P@ssw0rd123"
 
   preProcess = preprocessing.Preprocessing()
   #anno = annotation.Annotation();
@@ -120,7 +121,7 @@ class BuildWindow(tk.Tk):
     self.queryAnnotateScrollText.delete("1.0", tk.END)
 
     node = parse_json(annotation_text)
-
+    print(json.dumps(annotation_text))
     self.queryAnnotateScrollText.insert(tk.END, textVersion(node))
     self.queryAnnotateScrollText.update()
     self.queryAnnotateScrollText.config(state='disable')
