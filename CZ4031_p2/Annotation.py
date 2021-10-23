@@ -337,7 +337,7 @@ def to_text(node, skip=False):
     if node.subplan_name:
         table_subquery_name_pair[node.subplan_name] = node.get_output_name()
 
-    step = "Step " + str(cur_step) + ", " + step + "."
+    step = "\n\nStep " + str(cur_step) + ", " + step + "."
     node.set_step(cur_step)
     cur_step += 1
 

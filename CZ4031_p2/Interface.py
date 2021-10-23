@@ -12,8 +12,7 @@ class BuildWindow(tk.Tk):
   portTxt = 5432
   dbNametxt = "TPC-H"
   usernameTxt = "postgres"
-  #passwordTxt = "password"
-  passwordTxt = "P@ssw0rd123"
+  passwordTxt = "password"
 
   preProcess = preprocessing.Preprocessing()
   #anno = annotation.Annotation();
