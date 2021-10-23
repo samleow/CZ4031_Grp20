@@ -1,8 +1,9 @@
 import tkinter as tk
 import Preprocessing as preprocessing
-
+from Annotation import parse_json, textVersion
 from tkinter import messagebox
 from tkinter import scrolledtext
+import json
 
 class BuildWindow(tk.Tk):
 
@@ -11,11 +12,11 @@ class BuildWindow(tk.Tk):
   portTxt = 5432
   dbNametxt = "TPC-H"
   usernameTxt = "postgres"
-  passwordTxt = "password"
+  #passwordTxt = "password"
+  passwordTxt = "P@ssw0rd123"
 
   preProcess = preprocessing.Preprocessing()
-
-
+  #anno = annotation.Annotation();
 
   def __init__(self, *args, **kwargs):
     tk.Tk.__init__(self, *args, **kwargs)
@@ -48,7 +49,7 @@ class BuildWindow(tk.Tk):
 
     self.password = tk.StringVar()
     self.password.set(self.passwordTxt)
-    self.passwordEntry = tk.Entry(self, textvariable=self.password)
+    self.passwordEntry = tk.Entry(self, textvariable=self.password, show='*')
     self.passwordEntry.grid(row=4, column=1, pady=5)
 
     self.portLabel = tk.Label(self, text="Port", font='Times 12')
@@ -113,14 +114,17 @@ class BuildWindow(tk.Tk):
 
 
   def generate(self, queryText):
-    annotation = self.preProcess.executeExplainQuery(queryText)
-    print(annotation)
+    #annotation_text = self.preProcess.executeExplainQuery(queryText)
+    annotation_text = self.preProcess.executeExplainJSONQuery(queryText)
+    #print(annotation_text)
     self.queryAnnotateScrollText.config(state='normal')
     self.queryAnnotateScrollText.delete("1.0", tk.END)
-    self.queryAnnotateScrollText.insert(tk.END,annotation)
+
+    node = parse_json(annotation_text)
+
+    self.queryAnnotateScrollText.insert(tk.END, textVersion(node))
     self.queryAnnotateScrollText.update()
     self.queryAnnotateScrollText.config(state='disable')
-
 
 # app = BuildWindow()
 # app.mainloop()

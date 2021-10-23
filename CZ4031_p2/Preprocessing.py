@@ -48,7 +48,6 @@ class Preprocessing:
 
     return isConnected
 
-
   def executeExplainQuery(self, queryText):
 
     self.cur.execute("EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) " + queryText)
@@ -56,6 +55,10 @@ class Preprocessing:
     print(display)
 
     return display
+
+  def executeExplainJSONQuery(self, statement):
+    self.cur.execute("EXPLAIN (FORMAT JSON) " + statement)
+    return self.cur.fetchall()[0][0]
 
   # for testing in running database
   def runPostgreSQL(self):
