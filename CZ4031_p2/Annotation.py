@@ -153,7 +153,8 @@ def textVersion(node):
     if " to get intermediate table" in steps[-1]:
         steps[-1] = steps[-1][:steps[-1].index(" to get intermediate table")] + ' to get the final result.'
 
-    return steps
+    steps_str = ''.join(steps)
+    return steps_str
 
 
 def to_text(node, skip=False):
