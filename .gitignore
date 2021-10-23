@@ -70,3 +70,6 @@ __pycache__/
 # Temporary files
 *.tmp
 ~$*.*
+
+# Python project files
+*.pyproj
