@@ -50,7 +50,6 @@ struct Record
         ss << fixed << setprecision(1) << "tconst: " << id << " \tAverage Rating: " << avg_rating << "\tNumber of Votes: " << num_of_votes;
         return ss.str();
     }
-
 };
 
 struct Disk_Block
@@ -65,14 +64,14 @@ struct Disk_Block
 class Node
 {
 public:
-    uintptr_t* ptr;
-    int* key, size;
+    uintptr_t *ptr;
+    int *key, size;
     bool isLeaf;
 
     Node()
     {
         ptr = new uintptr_t[N + 1]{NULL};
-        key = new int[N] {NULL};
+        key = new int[N]{NULL};
         isLeaf = false;
         size = 0;
     }
@@ -112,7 +111,7 @@ class Bucket
 
     Bucket()
     {
-        ptr = new uintptr_t[RECORDS_PER_BUCKET+1] {NULL};
+        ptr = new uintptr_t[RECORDS_PER_BUCKET + 1]{NULL};
         key = -1;
         size = 0;
         overflowed = false;
@@ -120,7 +119,7 @@ class Bucket
 
     Bucket(int key)
     {
-        ptr = new uintptr_t[RECORDS_PER_BUCKET+1]{ NULL };
+        ptr = new uintptr_t[RECORDS_PER_BUCKET + 1]{NULL};
         this->key = key;
         size = 0;
         overflowed = false;
@@ -135,8 +134,7 @@ class Bucket
 class BPlusTree
 {
 public:
-
-    Node* root;
+    Node *root;
 
     // minimum keys
     // floor((N + 1) / 2)
@@ -161,12 +159,12 @@ public:
     }
 
     // insert record into existing bucket with pos in leaf node
-    void insertIntoBucket(Node* n, int pos, Record* r)
+    void insertIntoBucket(Node *n, int pos, Record *r)
     {
-        Bucket* b = reinterpret_cast<Bucket*>(n->ptr[pos]);
+        Bucket *b = reinterpret_cast<Bucket *>(n->ptr[pos]);
         while (b->overflowed)
         {
-            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+            b = reinterpret_cast<Bucket *>(b->ptr[RECORDS_PER_BUCKET]);
         }
 
         // check if bucket is not full
@@ -178,7 +176,7 @@ public:
         else
         {
             // create new overflow bucket
-            Bucket* nb = new Bucket(r->num_of_votes);
+            Bucket *nb = new Bucket(r->num_of_votes);
             num_of_buckets++;
             nb->ptr[0] = (uintptr_t)r;
             nb->size++;
@@ -186,11 +184,10 @@ public:
             b->ptr[RECORDS_PER_BUCKET] = (uintptr_t)nb;
             b->overflowed = true;
         }
-
     }
 
     // insert record into leaf node that has space and returns input position
-    int insertIntoLeaf(Node* n, Record* r)
+    int insertIntoLeaf(Node *n, Record *r)
     {
         bool is_set = false;
 
@@ -204,14 +201,14 @@ public:
             else if (r->num_of_votes < n->key[i])
             {
                 // shifts all keys after i to the right
-                for(int j = N - 1; j > i; j--)
+                for (int j = N - 1; j > i; j--)
                 {
                     n->ptr[j] = n->ptr[j - 1];
                     n->key[j] = n->key[j - 1];
                 }
 
                 // create a new bucket to store record
-                Bucket* nb = new Bucket(r->num_of_votes);
+                Bucket *nb = new Bucket(r->num_of_votes);
                 num_of_buckets++;
                 nb->ptr[0] = (uintptr_t)r;
                 nb->size++;
@@ -229,7 +226,7 @@ public:
         if (!is_set)
         {
             // create a new bucket to store record
-            Bucket* nb = new Bucket(r->num_of_votes);
+            Bucket *nb = new Bucket(r->num_of_votes);
             num_of_buckets++;
             nb->ptr[0] = (uintptr_t)r;
             nb->size++;
@@ -243,9 +240,9 @@ public:
 
     // searches through node recursively to get leaf node of record
     // returns the parent node
-    Node* searchForLeafNodeWithKey(Node** n, int key)
+    Node *searchForLeafNodeWithKey(Node **n, int key)
     {
-        Node* p = NULL;
+        Node *p = NULL;
 
         // advances down all levels of tree
         loop:
@@ -257,7 +254,7 @@ public:
                 // record under the left pointer of key
                 if (key < (*n)->key[i])
                 {
-                    (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
+                    (*n) = reinterpret_cast<Node *>((*n)->ptr[i]);
                     goto loop;
                 }
             }
@@ -267,7 +264,7 @@ public:
             else
             {
                 // record is larger than the last key
-                (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
+                (*n) = reinterpret_cast<Node *>((*n)->ptr[(*n)->size]);
             }
         }
         return p;
@@ -278,8 +275,8 @@ public:
     // returns total num of nodes accessed
 	int searchAndPrintLeafNode(Node** n, int key)
     {
-        Node* p = NULL;
-        Node* nodeArray[5];
+        Node *p = NULL;
+        Node *nodeArray[5];
         int nodeCounter = 0;
         int totalNodeCounter = 0;
 
@@ -289,7 +286,7 @@ public:
         {
             p = (*n);
             totalNodeCounter++;
-            if(nodeCounter < 5)
+            if (nodeCounter < 5)
             {
                 nodeArray[nodeCounter] = p;
                 nodeCounter++;
@@ -305,29 +302,29 @@ public:
             }
 
             if ((*n)->isLeaf)
-			{
+            {
                 break;
             }
             else
             {
                 // record is larger than the last key
-                (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
+                (*n) = reinterpret_cast<Node *>((*n)->ptr[(*n)->size]);
             }
         }
 
         totalNodeCounter++;
-        if(nodeCounter < 5)
+        if (nodeCounter < 5)
         {
             nodeArray[nodeCounter] = (*n);
             nodeCounter++;
         }
 
-        for(int i = 0; i < nodeCounter; i++)
+        for (int i = 0; i < nodeCounter; i++)
         {
-            cout << "Node " << i+1  << endl;
-            for(int j = 0; j < nodeArray[i]->size; j++)
+            cout << "Node " << i + 1 << endl;
+            for (int j = 0; j < nodeArray[i]->size; j++)
             {
-                cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << endl;
+                cout << "Index Keys " << j + 1 << ": " << nodeArray[i]->key[j] << endl;
             }
             cout << endl;
         }
@@ -335,11 +332,11 @@ public:
         return totalNodeCounter;
     }
 
-	// searches through node recursively to get left leaf sibling of record
+    // searches through node recursively to get left leaf sibling of record
     // returns the parent node
-    Node* searchForLeftLeafSiblingOfKey(Node** n, int key)
+    Node *searchForLeftLeafSiblingOfKey(Node **n, int key)
     {
-        Node* p = NULL;
+        Node *p = NULL;
 
         // advances down all levels of tree
 		loop:
@@ -356,7 +353,7 @@ public:
             }
 
             if ((*n)->isLeaf)
-				break;
+                break;
             else
             {
                 // record is smaller than the first key
@@ -369,8 +366,8 @@ public:
     // for Experiment 4 (search keys with "numVotes" from 30000 to 40000)
     Node* searchAndPrintExperimentFour(Node** n, int key)
     {
-        Node* p = NULL;
-        Node* nodeArray[5];
+        Node *p = NULL;
+        Node *nodeArray[5];
         int nodeCounter = 0;
         bool containKey = false;
         int totalNodeCounter = 0;
@@ -381,7 +378,7 @@ public:
         {
             p = (*n);
             totalNodeCounter++;
-            if(nodeCounter < 5)
+            if (nodeCounter < 5)
             {
                 nodeArray[nodeCounter] = p;
                 nodeCounter++;
@@ -391,7 +388,7 @@ public:
                 // record under the left pointer of key
                 if (key < (*n)->key[i])
                 {
-                    (*n) = reinterpret_cast<Node*>((*n)->ptr[i]);
+                    (*n) = reinterpret_cast<Node *>((*n)->ptr[i]);
                     goto loop;
                 }
             }
@@ -403,18 +400,18 @@ public:
             else
             {
                 // record is larger than the last key
-                (*n) = reinterpret_cast<Node*>((*n)->ptr[(*n)->size]);
+                (*n) = reinterpret_cast<Node *>((*n)->ptr[(*n)->size]);
             }
         }
 
         totalNodeCounter++;
-        if(nodeCounter < 5)
+        if (nodeCounter < 5)
         {
             nodeArray[nodeCounter] = (*n);
             nodeCounter++;
         }
 
-        for(int i = 0; i < nodeCounter; i++)
+        for (int i = 0; i < nodeCounter; i++)
         {
             for(int j = 0; j < nodeArray[i]->size; j++)
             {
@@ -428,26 +425,25 @@ public:
         // if the B+ tree contains the key, start printing the access nodes
         if(containKey)
         {
-            for(int i = 0; i < nodeCounter; i++)
+            for (int i = 0; i < nodeCounter; i++)
             {
-                cout << "\nNode " << i+1 << endl;
-                for(int j = 0; j < nodeArray[i]->size; j++)
+                cout << "\nNode " << i + 1 << endl;
+                for (int j = 0; j < nodeArray[i]->size; j++)
                 {
-                    if(key == nodeArray[i]->key[j])
-                        cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << " <----" << endl;
+                    if (key == nodeArray[i]->key[j])
+                        cout << "Index Keys " << j + 1 << ": " << nodeArray[i]->key[j] << " <----" << endl;
                     else
-                        cout << "Index Keys " << j+1 << ": " << nodeArray[i]->key[j] << endl;
-
+                        cout << "Index Keys " << j + 1 << ": " << nodeArray[i]->key[j] << endl;
                 }
             }
         }
 
-        cout << "Total Nodes Accessed: " << totalNodeCounter << "\n" <<endl;
+        //cout << "Total Nodes Accessed: " << totalNodeCounter << "\n" <<endl;
         return p;
     }
 
     // insert a child node into a parent node
-    void insertChildNode(Node* p, Node* c, int key)
+    void insertChildNode(Node *p, Node *c, int key)
     {
         for (int i = 0; i < p->size; i++)
         {
@@ -476,7 +472,7 @@ public:
 
     // splits the full leaf node into two and creates a slot for insertion
     // returns the node to insert into and the input position
-    tuple<Node*, int> splitFullLeafNodeForInsert(Node* curr, Node* n, int key)
+    tuple<Node *, int> splitFullLeafNodeForInsert(Node *curr, Node *n, int key)
     {
         int input_pos = -1;
         // get input position of key
@@ -601,7 +597,6 @@ public:
             (*n)->key[(*n)->size] = key;
             (*n)->ptr[(*n)->size + 1] = (uintptr_t)c;
             (*n)->size++;
-
         }
         // if input key is placed in between current keys and shifted
         else
@@ -629,7 +624,6 @@ public:
                 (*n)->key[input_pos + (*n)->size - N] = key;
                 (*n)->ptr[input_pos + (*n)->size - N + 1] = (uintptr_t)c;
                 (*n)->size++;
-
             }
             // if input position is to stay in current node
             else
@@ -662,15 +656,12 @@ public:
                 (*curr)->key[input_pos] = key;
                 (*curr)->ptr[input_pos + 1] = (uintptr_t)c;
                 (*curr)->size++;
-
             }
-
         }
-
     }
 
     // updates all parent nodes recursively on insertion
-    void insertParentUpdate(Node* p, Node* c, int key)
+    void insertParentUpdate(Node *p, Node *c, int key)
     {
         // if parent node still have space
         if (p->size < N)
@@ -684,7 +675,7 @@ public:
             // recursively loops until new parent node is root
 
             // new node for split
-            Node* n = new Node();
+            Node *n = new Node();
             num_of_nodes++;
 
             // splitting
@@ -694,7 +685,7 @@ public:
             if (p == root)
             {
                 // move left most key of new node to parent
-                Node* np = new Node();
+                Node *np = new Node();
                 num_of_nodes++;
                 np->key[0] = n->key[0];
                 np->ptr[0] = (uintptr_t)p;
@@ -745,29 +736,29 @@ public:
         // i.e. tree is not built yet
         if (!root)
         {
-            Node* n = new Node();
+            Node *n = new Node();
             num_of_nodes++;
             root = n;
             height++;
             n->isLeaf = true;
 
             // create a new bucket to store record
-            Bucket* nb = new Bucket(r->num_of_votes);
+            Bucket *nb = new Bucket(r->num_of_votes);
             num_of_buckets++;
             nb->ptr[0] = (uintptr_t)r;
             nb->size++;
 
-            n->ptr[0] = (uintptr_t )nb;
+            n->ptr[0] = (uintptr_t)nb;
             n->key[0] = r->num_of_votes;
             n->size++;
         }
         else
         {
             // initialise current node pointer to root of tree
-            Node* curr = root;
+            Node *curr = root;
 
             // searches through tree till it hit the leaf node w the key
-            Node* p = searchForLeafNodeWithKey(&curr, r->num_of_votes);
+            Node *p = searchForLeafNodeWithKey(&curr, r->num_of_votes);
 
             int key_pos = -1;
             for (int i = 0; i < curr->size; i++)
@@ -789,19 +780,20 @@ public:
             else
             {
                 // creating a new leaf node and splitting records equally
-                Node* n = new Node();
+                Node *n = new Node();
                 num_of_nodes++;
                 uintptr_t right_ptr = curr->ptr[N];
                 curr->ptr[N] = (uintptr_t)n;
                 n->ptr[N] = right_ptr;
                 n->isLeaf = true;
 
-                Node* t; int input_pos;
+                Node *t;
+                int input_pos;
                 // split full node equally between curr and n nodes
                 tie(t, input_pos) = splitFullLeafNodeForInsert(curr, n, r->num_of_votes);
 
                 // create a new bucket to store record
-                Bucket* nb = new Bucket(r->num_of_votes);
+                Bucket *nb = new Bucket(r->num_of_votes);
                 num_of_buckets++;
                 nb->ptr[0] = (uintptr_t)r;
                 nb->size++;
@@ -832,22 +824,20 @@ public:
                     }
 
                     insertParentUpdate(p, n, n->key[0]);
-
                 }
             }
-
         }
     }
 
     // get the bucket with given key
-    Bucket* getBucket(int key, bool print)
+    Bucket *getBucket(int key, bool print)
     {
         if (!root)
             return NULL;
 
-        Node* curr = root;
+        Node *curr = root;
 
-        if(!print)
+        if (!print)
             searchForLeafNodeWithKey(&curr, key);
         else
         {
@@ -859,14 +849,14 @@ public:
         {
             // returns record if key match
             if (key == curr->key[i])
-                return reinterpret_cast<Bucket*>(curr->ptr[i]);
+                return reinterpret_cast<Bucket *>(curr->ptr[i]);
         }
 
         return NULL;
     }
 
     // updates all parent nodes recursively on key change
-    void changeKeyParentUpdate(Node* p, int key, int new_key)
+    void changeKeyParentUpdate(Node *p, int key, int new_key)
     {
         // get key pos
         int key_pos = getKeyPositionInNode(p, key);
@@ -880,15 +870,14 @@ public:
         }
         else
         {
-            if(p != root)
+            if (p != root)
                 changeKeyParentUpdate(getParentNode(root, p), key, new_key);
         }
-
     }
 
     // returns the key position in a node
     // if key not found, returns -1
-    int getKeyPositionInNode(Node* n, int key)
+    int getKeyPositionInNode(Node *n, int key)
     {
         for (int i = 0; i < n->size; i++)
         {
@@ -911,20 +900,21 @@ public:
     }
 
     // returns the sibling nodes of child node
-    tuple<Node*, Node*> getLeafSiblings(Node* p, Node* c)
+    tuple<Node *, Node *> getLeafSiblings(Node *p, Node *c)
     {
         // sibling nodes
-        Node* sl = NULL; Node* sr = NULL;
+        Node *sl = NULL;
+        Node *sr = NULL;
         // get right sibling
         if (c->ptr[N])
-            sr = reinterpret_cast<Node*>(c->ptr[N]);
+            sr = reinterpret_cast<Node *>(c->ptr[N]);
 
         // get left sibling
         int key_pos = getKeyPositionInNode(p, c->key[0]);
         // if left sibling is under parent
         if (key_pos != -1)
         {
-            sl = reinterpret_cast<Node*>(p->ptr[key_pos]);
+            sl = reinterpret_cast<Node *>(p->ptr[key_pos]);
             return make_tuple(sl, sr);
         }
         else
@@ -1134,10 +1124,10 @@ public:
         if (!root)
             return false;
 
-        Bucket* b = NULL;
-        Node* curr = root;
+        Bucket *b = NULL;
+        Node *curr = root;
         // parent of leaf node
-        Node* p = searchForLeafNodeWithKey(&curr, key);
+        Node *p = searchForLeafNodeWithKey(&curr, key);
 
         // bucket position
         int delete_pos = 0;
@@ -1146,12 +1136,12 @@ public:
             // returns record if key match
             if (key == curr->key[delete_pos])
             {
-                b = reinterpret_cast<Bucket*>(curr->ptr[delete_pos]);
+                b = reinterpret_cast<Bucket *>(curr->ptr[delete_pos]);
                 break;
             }
         }
         // no bucket found
-        if(!b)
+        if (!b)
             return false;
 
         // Simple deletion
@@ -1190,10 +1180,11 @@ public:
         else
         {
             // sibling nodes
-            Node* sl = NULL; Node* sr = NULL;
+            Node *sl = NULL;
+            Node *sr = NULL;
             tie(sl, sr) = getLeafSiblings(p, curr);
             // sibling's parent
-            Node* sp = NULL;
+            Node *sp = NULL;
 
             if (sl && sl->size-1 >= min_key_in_leaf)
             {
@@ -1215,7 +1206,7 @@ public:
                     curr->ptr[i] = curr->ptr[i-1];
                 }
                 // transferring sibling key
-                curr->key[0] = sl->key[sl->size-1];
+                curr->key[0] = sl->key[sl->size - 1];
                 curr->ptr[0] = sl->ptr[sl->size - 1];
                 curr->size++;
                 sl->key[sl->size - 1] = NULL;
@@ -1226,7 +1217,7 @@ public:
                 sp = getLeafParent(root, sl);
                 changeKeyParentUpdate(sp, key, curr->key[0]);
             }
-            else if (sr && sr->size-1 >= min_key_in_leaf)
+            else if (sr && sr->size - 1 >= min_key_in_leaf)
             {
                 // delete bucket from node
                 for (int i = curr->size - 1; i > delete_pos; i--)
@@ -1256,7 +1247,7 @@ public:
 
                 // update parent keys
                 sp = getLeafParent(root, sr);
-                changeKeyParentUpdate(sp, curr->key[curr->size-1], sr->key[0]);
+                changeKeyParentUpdate(sp, curr->key[curr->size - 1], sr->key[0]);
             }
             else
             {
@@ -1357,7 +1348,7 @@ public:
         return true;
     }
 
-    Node* getParentNode(Node* tree, Node* child)
+    Node *getParentNode(Node *tree, Node *child)
     {
 		Node* parent = NULL;
 		if (tree->isLeaf || reinterpret_cast<Node*>(tree->ptr[0])->isLeaf)
@@ -1380,9 +1371,9 @@ public:
 		return parent;
     }
 
-    Node* getLeafParent(Node* tree, Node* child)
+    Node *getLeafParent(Node *tree, Node *child)
     {
-        Node* parent = NULL;
+        Node *parent = NULL;
         if (tree->isLeaf)
             return NULL;
 
@@ -1403,14 +1394,14 @@ public:
         return parent;
     }
 
-    void displayTree(Node* n)
+    void displayTree(Node *n)
     {
         if (n != NULL)
         {
             cout << "\t";
             for (int i = 0; i < n->size; i++)
             {
-                if(n->key[i] == 0)
+                if (n->key[i] == 0)
                     cout << "-\t ";
                 else
                     cout << n->key[i] << "\t ";
@@ -1421,7 +1412,7 @@ public:
                 for (int i = 0; i < n->size + 1; i++)
                 {
                     cout << "c" << i << ":\n";
-                    displayTree(reinterpret_cast<Node*>(n->ptr[i]));
+                    displayTree(reinterpret_cast<Node *>(n->ptr[i]));
                 }
             }
         }
@@ -1429,7 +1420,8 @@ public:
 
 };
 
-int getTotalRecordCount() {
+int getTotalRecordCount()
+{
 
     ifstream myfile;
     myfile.open(DATA_FILE);
@@ -1442,7 +1434,8 @@ int getTotalRecordCount() {
     {
         if (!skippedFirstLine)
             skippedFirstLine = true;
-        else {
+        else
+        {
             line_count++;
         }
     }
@@ -1479,7 +1472,7 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
             Record r;
 
             istringstream iss(line);
-            string id,avg_rating,num_of_votes;
+            string id, avg_rating, num_of_votes;
 
             getline(iss, id, '\t');
             getline(iss, avg_rating, '\t');
@@ -1506,13 +1499,13 @@ void retrieveData(Disk_Block *disk, int blocks_utilized)
     }
 
     myfile.close();
-
 }
 
-void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
+void Experiment3(BPlusTree *bpt, Disk_Block *disk, int BLOCKS_WITH_RECORDS)
 {
     // Experiment 3
-    cout << "\t- Experiment 3 -" << endl << endl;
+    cout << "\t- Experiment 3 -" << endl
+         << endl;
 
     int k = 500;
 
@@ -1521,7 +1514,7 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
 
     if (bpt->getBucket(k, false))
     {
-        Bucket* b = bpt->getBucket(k, false);
+        Bucket *b = bpt->getBucket(k, false);
         int bi = 1;
 
         while (b->overflowed)
@@ -1531,7 +1524,7 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
                 total_rating += reinterpret_cast<Record*>(b->ptr[i])->avg_rating;
                 bi++;
             }
-            b = reinterpret_cast<Bucket*>(b->ptr[RECORDS_PER_BUCKET]);
+            b = reinterpret_cast<Bucket *>(b->ptr[RECORDS_PER_BUCKET]);
         }
         for (int i = 0; i < b->size; i++)
         {
@@ -1559,9 +1552,9 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
              if (disk[i].records[j].num_of_votes == k)
              {
                 totalBlocksAccessed++;
-                if(o < 5)
+                if (o < 5)
                 {
-                    cout << "Data Block " << i+1 << endl;
+                    cout << "Data Block " << i + 1 << endl;
                     for (int p = 0; p < RECORDS_PER_BLOCK; p++)
                     {
                         cout << "Record " << p + 1 << " tconst value: " << disk[i].records[p].id << endl;
@@ -1579,7 +1572,7 @@ void Experiment3(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
     cout << "Average Rating =  " << avg_rating << endl;
 }
 
-void Experiment4(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
+void Experiment4(BPlusTree *bpt, Disk_Block *disk, int BLOCKS_WITH_RECORDS)
 {
     cout << "\t- Experiment 4 - " << endl << endl;
 
@@ -1674,7 +1667,7 @@ hit_maxed:
 
 }
 
-void Experiment5(BPlusTree* bpt)
+void Experiment5(BPlusTree *bpt)
 {
     cout << "\tExperiment 5:" << endl << endl;
 
@@ -1719,20 +1712,23 @@ void Experiment5(BPlusTree* bpt)
 
 }
 
-void Menu(BPlusTree* bpt, Disk_Block* disk, int BLOCKS_WITH_RECORDS)
+void Menu(BPlusTree *bpt, Disk_Block *disk, int BLOCKS_WITH_RECORDS)
 {
     int input_i = -1;
 
     while (input_i != 4)
     {
-        cout << "\n\t- Menu -" << endl << endl;
+        cout << "\n\t- Menu -" << endl
+             << endl;
         cout << "1 - Experiment 3" << endl;
         cout << "2 - Experiment 4" << endl;
         cout << "3 - Experiment 5" << endl;
-        cout << "4 - Exit program" << endl << endl;
+        cout << "4 - Exit program" << endl
+             << endl;
         cout << "Enter an option (1/2/3/4): ";
         cin >> input_i;
-        cout << endl << endl;
+        cout << endl
+             << endl;
 
         switch (input_i)
         {
@@ -1770,9 +1766,9 @@ int main()
     int DATABASE_SIZE = -1;
 
     cout << "Disk capacity:\t" << DISK_SIZE << "B" << endl;
-    cout << "Block size:\t" << BLOCK_SIZE << "B"  << endl;
+    cout << "Block size:\t" << BLOCK_SIZE << "B" << endl;
     cout << "Blocks in disk:\t" << BLOCKS_IN_DISK << endl;
-    cout << "Record size:\t" << RECORD_SIZE << "B"  << endl;
+    cout << "Record size:\t" << RECORD_SIZE << "B" << endl;
     cout << "Num of records in a block:\t" << RECORDS_PER_BLOCK << endl;
 
     // initialized based on data.tsv
@@ -1784,16 +1780,18 @@ int main()
     // Experiment 1 - Initialise database and store records
 #pragma region Experiment 1
 
-    cout << "\n\t- Experiment 1 -" << endl << endl;
+    cout << "\n\t- Experiment 1 -" << endl
+         << endl;
 
-    BLOCKS_WITH_RECORDS = (int)ceil((float)TOTAL_RECORD_COUNT/(float)RECORDS_PER_BLOCK);
+    BLOCKS_WITH_RECORDS = (int)ceil((float)TOTAL_RECORD_COUNT / (float)RECORDS_PER_BLOCK);
     cout << "Num of blocks utilized:\t" << BLOCKS_WITH_RECORDS << endl;
 
-    DATABASE_SIZE = BLOCKS_WITH_RECORDS*BLOCK_SIZE;
-    cout << "Size of database:\t" << static_cast<float>(DATABASE_SIZE)/1024/1024 << "MB\n" << endl;
+    DATABASE_SIZE = BLOCKS_WITH_RECORDS * BLOCK_SIZE;
+    cout << "Size of database:\t" << static_cast<float>(DATABASE_SIZE) / 1024 / 1024 << "MB\n"
+         << endl;
 
     // disk memory, containing all data blocks
-    Disk_Block* disk;
+    Disk_Block *disk;
 
     disk = new Disk_Block[BLOCKS_WITH_RECORDS];
     retrieveData(disk, BLOCKS_WITH_RECORDS);
@@ -1803,7 +1801,8 @@ int main()
     // Experiment 2 - Initialise B+ tree and populate with records
 #pragma region Experiment 2
 
-    cout << "\t- Experiment 2 -" << endl << endl;
+    cout << "\t- Experiment 2 -" << endl
+         << endl;
 
     cout << "Size of each pointer: " << POINTER_SIZE << "B" << endl;
     cout << "Number of maximum keys in a B+ tree node (n): " << N << endl;
