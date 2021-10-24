@@ -1,8 +1,12 @@
 import tkinter as tk
 import Preprocessing as preprocessing
-from Annotation import parse_json, textVersion
+from Annotation import parse_json, textVersion, generate_tree, convert_tree_string
 from tkinter import messagebox
 from tkinter import scrolledtext
+from ete3 import *
+import re
+from graphviz import Digraph
+
 import json
 
 class BuildWindow(tk.Tk):
@@ -124,6 +128,60 @@ class BuildWindow(tk.Tk):
     self.queryAnnotateScrollText.insert(tk.END, textVersion(node))
     self.queryAnnotateScrollText.update()
     self.queryAnnotateScrollText.config(state='disable')
+
+    #print(annotation_text)
+
+    # print text style tree
+    print(self.get_tree(annotation_text))
+
+
+    # print using ete3 tree
+    tree_format = convert_tree_string(node)
+    t = Tree(tree_format + ";", format=1)
+    ts = TreeStyle()
+    ts.show_leaf_name = False
+
+    # this function somehow display the names in the tree
+    def my_layout(node):
+      F = TextFace(" " + node.name + " ")
+      add_face_to_node(F, node, column=0, position="branch-right")
+    ts.layout_fn = my_layout
+    t.show(tree_style=ts)
+    #t.show()
+
+    print(t)
+
+  def get_tree(self, json_obj):
+    head = parse_json(json_obj)
+    return generate_tree("", head)
+
+    # tree_format2 = convert_tree_graphviz(node)
+    #
+    # # for i in tree_format2:
+    # #   print("format 2: " + i)
+    #
+    # list = re.split(',',tree_format2)
+    #
+    # graph = Digraph()
+    #
+    # l = len(list)
+    #
+    # for i in list:
+    #   print("list: " + i)
+    #   temp = re.split('->',i)
+    #   for index, obj in enumerate(temp):
+    #     graph.edge(obj[index], obj[index + 1])
+
+    # print("format 2: "+ tree_format2)
+
+  # def generateTree(self):
+  #   print(self.get_tree(annotation_text))
+
+
+
+
+
+
 
 # app = BuildWindow()
 # app.mainloop()

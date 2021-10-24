@@ -343,3 +343,92 @@ def to_text(node, skip=False):
     cur_step += 1
 
     steps.append(step)
+
+
+def generate_tree(tree, node, _prefix="", _last=True):
+    if _last:
+        #tree = "{}`-- {}\n".format(_prefix, node.node_type)
+        tree = "{}|--- {}\n".format(_prefix, node.node_type)
+    else:
+        #tree = "{}|-- {}\n".format(_prefix, node.node_type)
+        tree = "{}|--- {}\n".format(_prefix, node.node_type)
+
+    _prefix += "|   " if _last else "|  "
+    child_count = len(node.children)
+    for i, child in enumerate(node.children):
+        _last = i == (child_count - 1)
+        tree = tree + generate_tree(tree, child, _prefix, _last)
+    return tree
+
+
+def convert_tree_string(node):
+    if len(node.children) == 0:
+        print(node.node_type)
+        return node.node_type
+
+    lstr = "("
+
+    for n in node.children:
+        print(node.node_type)
+        lstr += convert_tree_string(n) + ","
+
+    lstr = lstr[:-1]
+
+    lstr += ")%s" % node.node_type
+    print(lstr)
+    return lstr
+
+
+
+
+# def convert_tree_string(node):
+#     if len(node.children) == 0:
+#         print(node.node_type)
+#         return node.node_type
+#
+#     lstr = "("
+#
+#     for n in node.children:
+#         print(node.node_type)
+#         lstr += convert_tree_string(n) + ","
+#
+#     lstr = lstr[:-1]
+#
+#     lstr += ")%s" % node.node_type
+#     print(lstr)
+#     return lstr
+
+# def convert_tree_graphviz(node):
+#     if len(node.children) == 0:
+#         print(node.node_type)
+#         return node.node_type
+#
+#     lstr = ""
+#     list = []
+#     new_str =""
+#
+#     for n in node.children:
+#         #print(node.node_type)
+#         #print("node children: "+ n.node_type)
+#         lstr = convert_tree_graphviz(n) + " -> " + lstr
+#         # remove the last repeated " -> "
+#         lstr = lstr[:-4]
+#         lstr = ("%s" % node.node_type) + " -> " + lstr
+#         list.append(lstr + ";")
+#         print("ended")
+#
+#     # # remove the last repeated " -> "
+#     # lstr = lstr[:-4]
+#     #
+#     # lstr = ("%s" % node.node_type) + " -> " + lstr
+#
+#     for i in list:
+#         #print("list: " + i)
+#         new_str = new_str + "," + i
+#
+#     #print(lstr)
+#     new_str = new_str[1:] # remove first ,
+#     #print( "new str: "+new_str)
+#     return new_str
+
+
