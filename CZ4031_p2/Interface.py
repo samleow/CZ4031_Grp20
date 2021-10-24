@@ -102,6 +102,10 @@ class BuildWindow(tk.Tk):
                                                         )
     self.queryAnnotateScrollText.grid(row=8, column=0, columnspan=4)
 
+    self.generateTreeBtn = tk.Button(self, text="Generate Tree",
+                                      command=lambda: self.generateTree(self.queryScrollText.get("1.0", tk.END)))
+    self.generateTreeBtn.grid(row=8, column=4)
+
 
 
 
@@ -131,6 +135,11 @@ class BuildWindow(tk.Tk):
     self.queryAnnotateScrollText.config(state='disable')
 
     #print(annotation_text)
+
+
+  def generateTree(self,queryText):
+    annotation_text = self.preProcess.executeExplainJSONQuery(queryText)
+    node = parse_json(annotation_text)
 
     # print text style tree
     print(self.get_tree(annotation_text))
