@@ -157,7 +157,6 @@ def textVersion(node):
     steps_str = ''.join(steps)
     return steps_str
 
-
 def to_text(node, skip=False):
     print("")
     global steps, cur_step, cur_table_name
@@ -252,8 +251,10 @@ def to_text(node, skip=False):
             step += node.get_output_name()
 
         # if no table filter, remain original table name
-        if not node.table_filter:
+        if not node.index_cond and not node.table_filter:
             increment = False
+
+            
 
     elif node.node_type == "Unique":
         # combine unique and sort
@@ -318,6 +319,11 @@ def to_text(node, skip=False):
             step += " table " + node.children[0].get_output_name()
 
     # add conditions
+    if node.index_cond:
+        if ":" not in node.index_cond:
+            node.index_cond = node.index_cond[:-1]
+        step += " and filtering on " + re.sub("\:[^)]*\)", '', node.index_cond, flags=re.DOTALL) + ")"
+
     if node.group_key:
         if len(node.group_key) == 1:
             step += " with grouping on attribute " + node.group_key[0].replace("::text", "")
@@ -345,6 +351,7 @@ def to_text(node, skip=False):
         cur_table_name += 1
     if node.subplan_name:
         table_subquery_name_pair[node.subplan_name] = node.get_output_name()
+        
 
     step = "\n\nStep " + str(cur_step) + ", " + step + "."
     node.set_step(cur_step)
