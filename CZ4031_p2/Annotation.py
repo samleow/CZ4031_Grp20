@@ -5,7 +5,7 @@ import re
 
 class Node(object):
     def __init__(self, node_type, relation_name, schema, alias, group_key, sort_key, join_type, index_name,
-                 hash_cond, table_filter, index_cond, merge_cond, recheck_cond, join_filter, subplan_name, actual_rows,
+                 hash_cond, table_filter, index_cond, merge_cond, recheck_cond, join_filter, subplan_name,
                  actual_time):
         self.node_type = node_type
         self.children = []
@@ -23,7 +23,6 @@ class Node(object):
         self.recheck_cond = recheck_cond
         self.join_filter = join_filter
         self.subplan_name = subplan_name
-        self.actual_rows = actual_rows
         self.actual_time = actual_time
 
     def add_children(self, child):
@@ -56,7 +55,7 @@ def parse_json(json_obj):
         parent_node = q_node.get()
 
         relation_name = schema = alias = group_key = sort_key = join_type = index_name = hash_cond = table_filter \
-            = index_cond = merge_cond = recheck_cond = join_filter = subplan_name = actual_rows = actual_time = None
+            = index_cond = merge_cond = recheck_cond = join_filter = subplan_name = actual_time = None
         if 'Relation Name' in current_plan:
             relation_name = current_plan['Relation Name']
         if 'Schema' in current_plan:
@@ -83,8 +82,6 @@ def parse_json(json_obj):
             recheck_cond = current_plan['Recheck Cond']
         if 'Join Filter' in current_plan:
             join_filter = current_plan['Join Filter']
-        if 'Actual Rows' in current_plan:
-            actual_rows = current_plan['Actual Rows']
         if 'Actual Total Time' in current_plan:
             actual_time = current_plan['Actual Total Time']
         if 'Subplan Name' in current_plan:
@@ -96,7 +93,7 @@ def parse_json(json_obj):
 
         current_node = Node(current_plan['Node Type'], relation_name, schema, alias, group_key, sort_key, join_type,
                             index_name, hash_cond, table_filter, index_cond, merge_cond, recheck_cond, join_filter,
-                            subplan_name, actual_rows, actual_time)
+                            subplan_name, actual_time)
         print(current_node.node_type)
 
         if "Limit" == current_node.node_type:
@@ -206,7 +203,7 @@ def to_text(node, skip=False):
                     step += (" and table " + child.get_output_name())
             # combine hash with hash join
             # step = "hash table " + hashed_table + step + " under condition " + "hash cond"
-            step = "hash table " + hashed_table + step + " under condition " + node.hash_cond.replace("::text", "")
+            step = "hash table " + hashed_table + step + " under condition " + node.hash_cond
 
         elif "Merge" in node.node_type:
             step += "perform " + node.node_type.lower() + " on "
@@ -224,7 +221,7 @@ def to_text(node, skip=False):
                 sort_step = "sort "
                 for child in node.children:
                     if child.node_type == "Sort":
-                        if i < len(node.children) - 1:
+                        if i < len(node.children):
                             sort_step += ("table " + child.get_output_name())
                         else:
                             sort_step += (" and table " + child.get_output_name())
@@ -245,7 +242,7 @@ def to_text(node, skip=False):
             if "Bitmap Index Scan" in node.children[0].node_type:
                 node.children[0].set_output_name(node.relation_name)
                 step += "performs bitmap heap scan on table " + node.children[0].get_output_name() +\
-                        " with index condition " + node.children[0].index_cond.replace("::text", "")
+                        " with index condition " + node.children[0].index_cond
         else:
             step += "perform " + node.node_type.lower() + " on table "
             step += node.get_output_name()
@@ -254,15 +251,13 @@ def to_text(node, skip=False):
         if not node.index_cond and not node.table_filter:
             increment = False
 
-            
-
     elif node.node_type == "Unique":
         # combine unique and sort
         if "Sort" in node.children[0].node_type:
             node.children[0].set_output_name(node.children[0].children[0].get_output_name())
             step = "sort " + node.children[0].get_output_name()
             if node.children[0].sort_key:
-                step += " with attribute " + node.sort_key.replace(":::text", "") + " and "
+                step += " with attribute " + node.sort_key + " and "
             else:
                 step += " and "
 
@@ -293,13 +288,6 @@ def to_text(node, skip=False):
             step += " with attribute " + node_sort_key_str.replace('DESC', '') + "in a descending order"
         else:
             step += " with attribute " + node_sort_key_str
-        # step += "perform sort on table "
-        # if len(node.sort_key) == 1:
-        #     step += node.sort_key[0].replace("::text", "")
-        # else:
-        #     for i in node.sort_key[:-1]:
-        #         step += i.replace("::text", "") + ", "
-        #     step += node.sort_key[-1].replace("::text", "")
 
     elif node.node_type == "Limit":
         step += "limit the result from table " + node.children[0].get_output_name() + " to " + str(
@@ -322,20 +310,21 @@ def to_text(node, skip=False):
     if node.index_cond:
         if ":" not in node.index_cond:
             node.index_cond = node.index_cond[:-1]
+        if "AND" in node.index_cond or  "OR" in node.index_cond:
+            node.index_cond = node.index_cond[1:-1]
+            
         step += " and filtering on " + re.sub("\:[^)]*\)", '', node.index_cond, flags=re.DOTALL) + ")"
-
+        
     if node.group_key:
         if len(node.group_key) == 1:
-            step += " with grouping on attribute " + node.group_key[0].replace("::text", "")
+            step += " with grouping on attribute " + node.group_key[0]
         else:
             step += " with grouping on attribute "
             for i in node.group_key[:-1]:
                 step += i.replace("::text", "") + ", "
             step += node.group_key[-1].replace("::text", "")
+            
     if node.table_filter:
-        #step += " and filtering on " + node.table_filter.replace(":::text", "")
-        #sep = "'"
-        #step += " and filtering on " + sep.join(node.table_filter.split(sep)[:-1]) + "')"
         if ":" not in node.table_filter:
             node.table_filter = node.table_filter[:-1]
         step += " and filtering on " + re.sub("\:[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
