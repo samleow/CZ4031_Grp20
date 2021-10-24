@@ -138,7 +138,6 @@ def simplify_graph(node):
 
     return new_node
 
-
 def textVersion(node):
     global steps, cur_step, cur_table_name, table_subquery_name_pair
     global current_plan_tree
@@ -285,9 +284,22 @@ def to_text(node, skip=False):
         step += node.children[0].get_output_name()
         node_sort_key_str = ''.join(node.sort_key)
         if "DESC" in node_sort_key_str:
+##            if ":" not in node_sort_key_str:
+##                if ")" in node_sort_key_str:
+##                    node_sort_key_str = node_sort_key_str[:-1]
+##            if "AND" in node_sort_key_str or  "OR" in node_sort_key_str:
+##                node_sort_key_str = node_sort_key_str[1:-1]
+##
+##            node_sort_key_str = re.sub("\::[^)]*\)", '', node_sort_key_str, flags=re.DOTALL)
             step += " with attribute " + node_sort_key_str.replace('DESC', '') + "in a descending order"
+
         else:
-            step += " with attribute " + node_sort_key_str
+            if ":" not in node_sort_key_str:
+                node_sort_key_str = node_sort_key_str[:-1]
+            if "AND" in node_sort_key_str or  "OR" in node_sort_key_str:
+                node_sort_key_str = node_sort_key_str[1:-1]
+            
+            step += " with attribute " + re.sub("\::[^)]*\)", '', node_sort_key_str, flags=re.DOTALL) + ")"
 
     elif node.node_type == "Limit":
         step += "limit the result from table " + node.children[0].get_output_name() + " to " + str(
@@ -313,7 +325,7 @@ def to_text(node, skip=False):
         if "AND" in node.index_cond or  "OR" in node.index_cond:
             node.index_cond = node.index_cond[1:-1]
             
-        step += " and filtering on " + re.sub("\:[^)]*\)", '', node.index_cond, flags=re.DOTALL) + ")"
+        step += " and filtering on " + re.sub("\::[^)]*\)", '', node.index_cond, flags=re.DOTALL) + ")"
         
     if node.group_key:
         if len(node.group_key) == 1:
@@ -327,11 +339,17 @@ def to_text(node, skip=False):
     if node.table_filter:
         if ":" not in node.table_filter:
             node.table_filter = node.table_filter[:-1]
-        step += " and filtering on " + re.sub("\:[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
+        if "AND" in node.table_filter or  "OR" in node.table_filter:
+            node.table_filter = node.table_filter[1:-1]
+            
+        step += " and filtering on " + re.sub("\::[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
     if node.join_filter:
         if ":" not in node.table_filter:
             node.table_filter = node.table_filter[:-1]
-        step += " while filtering on " + re.sub("\:[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
+        if "AND" in node.table_filter or  "OR" in node.table_filter:
+            node.table_filter = node.table_filter[1:-1]
+            
+        step += " while filtering on " + re.sub("\::[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
 
         # set intermediate table name
     if increment:
