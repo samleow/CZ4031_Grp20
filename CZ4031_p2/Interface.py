@@ -150,10 +150,23 @@ class BuildWindow(tk.Tk):
     t = Tree(tree_format + ";", format=1)
     ts = TreeStyle()
     ts.show_leaf_name = False
+    ts.rotation = 90
+
+    # Draws nodes as small red spheres of diameter equal to 10 pixels
+    nstyle = NodeStyle()
+    nstyle["shape"] = "sphere"
+    nstyle["size"] = 10
+    nstyle["fgcolor"] = "darkblue"
+
+    # Applies the same static style to all nodes in the tree. Note that,
+    # if "nstyle" is modified, changes will affect to all nodes
+    for n in t.traverse():
+      n.set_style(nstyle)
 
     # this function somehow display the names in the tree
     def my_layout(node):
       F = TextFace(" " + node.name + " ")
+      F.rotation = 270
       add_face_to_node(F, node, column=0, position="branch-right")
     ts.layout_fn = my_layout
     t.show(tree_style=ts)
