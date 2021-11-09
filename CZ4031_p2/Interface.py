@@ -1,9 +1,9 @@
 import tkinter as tk
 import Preprocessing as preprocessing
 from Annotation import parse_json, textVersion, generate_tree, convert_tree_string
-from tkinter import messagebox
-from tkinter import scrolledtext
+from tkinter import messagebox, scrolledtext 
 from ete3 import *
+import PyQt5
 import re
 from graphviz import Digraph
 

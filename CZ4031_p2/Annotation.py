@@ -122,22 +122,6 @@ def parse_json(json_obj):
 
     return head_node
 
-
-def simplify_graph(node):
-    new_node = copy.deepcopy(node)
-    new_node.children = []
-
-    for child in node.children:
-        new_child = simplify_graph(child)
-        new_node.add_children(new_child)
-        new_node.actual_time -= child.actual_time
-
-    if node.node_type in ["Result"]:
-        print(node.node_type)
-        return node.children[0]
-
-    return new_node
-
 def textVersion(node):
     global steps, cur_step, cur_table_name, table_subquery_name_pair
     global current_plan_tree
@@ -154,7 +138,6 @@ def textVersion(node):
     return steps_str
 
 def to_text(node, skip=False):
-    print("")
     global steps, cur_step, cur_table_name
     increment = True
     # skip the child if merge it with current node
@@ -294,12 +277,13 @@ def to_text(node, skip=False):
             step += " with attribute " + node_sort_key_str.replace('DESC', '') + "in a descending order"
 
         else:
-            if ":" not in node_sort_key_str:
-                node_sort_key_str = node_sort_key_str[:-1]
-            if "AND" in node_sort_key_str or  "OR" in node_sort_key_str:
-                node_sort_key_str = node_sort_key_str[1:-1]
-            
-            step += " with attribute " + re.sub("\::[^)]*\)", '', node_sort_key_str, flags=re.DOTALL) + ")"
+            step += " with attribute " + node_sort_key_str
+##            if ":" not in node_sort_key_str:
+##                node_sort_key_str = node_sort_key_str[:-1]
+##            if "AND" in node_sort_key_str or  "OR" in node_sort_key_str:
+##                node_sort_key_str = node_sort_key_str[1:-1]
+##            
+##            step += " with attribute " + re.sub("\::[^)]*\)", '', node_sort_key_str, flags=re.DOTALL) + ")"
 
     elif node.node_type == "Limit":
         step += "limit the result from table " + node.children[0].get_output_name() + " to " + str(
@@ -324,8 +308,9 @@ def to_text(node, skip=False):
             node.index_cond = node.index_cond[:-1]
         if "AND" in node.index_cond or  "OR" in node.index_cond:
             node.index_cond = node.index_cond[1:-1]
-            
-        step += " and filtering on " + re.sub("\::[^)]*\)", '', node.index_cond, flags=re.DOTALL) + ")"
+
+        step += " and filtering on " + node.index_cond.rsplit("::", 1)[0] + ")"
+        #step += " and filtering on " + re.sub("\::[^)]*\)", '', node.index_cond, flags=re.DOTALL) + ")"
         
     if node.group_key:
         if len(node.group_key) == 1:
@@ -341,15 +326,18 @@ def to_text(node, skip=False):
             node.table_filter = node.table_filter[:-1]
         if "AND" in node.table_filter or  "OR" in node.table_filter:
             node.table_filter = node.table_filter[1:-1]
-            
-        step += " and filtering on " + re.sub("\::[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
+
+
+        step += " and filtering on " + node.table_filter.rsplit("::", 1)[0] + ")"
+        #step += " and filtering on " + re.sub("\::[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
     if node.join_filter:
         if ":" not in node.table_filter:
             node.table_filter = node.table_filter[:-1]
         if "AND" in node.table_filter or  "OR" in node.table_filter:
             node.table_filter = node.table_filter[1:-1]
-            
-        step += " while filtering on " + re.sub("\::[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
+
+        step += " while filtering on " + node.table_filter.rsplit("::", 1)[0] + ")"   
+        #step += " while filtering on " + re.sub("\::[^)]*\)", '', node.table_filter, flags=re.DOTALL) + ")"
 
         # set intermediate table name
     if increment:
