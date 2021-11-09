@@ -20,6 +20,9 @@ class BuildWindow(tk.Tk):
   #passwordTxt = "password"
   passwordTxt = "P@ssw0rd123"
 
+
+
+
   preProcess = preprocessing.Preprocessing()
   #anno = annotation.Annotation();
 
@@ -73,7 +76,7 @@ class BuildWindow(tk.Tk):
     self.dbNameEntry = tk.Entry(self, textvariable=self.dbName)
     self.dbNameEntry.grid(row=3, column=4, pady=5)
 
-    connect_btn = tk.Button(self, text="Connect", command=lambda :self.submit(self.hostNameEntry.get(), self.portEntry.get(),self.dbNameEntry.get(),self.userNameEntry.get(),self.passwordEntry.get()))
+    connect_btn = tk.Button(self, text="Connect", command=lambda : self.connect(self.hostNameEntry.get(), self.portEntry.get(), self.dbNameEntry.get(), self.userNameEntry.get(), self.passwordEntry.get()))
     connect_btn.grid(row=4, column=3, columnspan=2, pady=5, ipadx=100)
 
 
@@ -88,7 +91,8 @@ class BuildWindow(tk.Tk):
                                                         )
     self.queryScrollText.grid(row=6, column=0, columnspan=4)
 
-    self.generateQueryBtn = tk.Button(self,text="Generate Query Plan",command=lambda :self.generate(self.queryScrollText.get("1.0", tk.END)))
+    self.generateQueryBtn = tk.Button(self,text="Generate Query Plan",command=lambda :self.generate(self.queryScrollText.get("1.0", tk.END),self.hostNameEntry.get(), self.portEntry.get(), self.dbNameEntry.get(), self.userNameEntry.get(), self.passwordEntry.get()))
+    self.generateQueryBtn["state"] = "disable"
     self.generateQueryBtn.grid(row=6,column=4)
 
     #display query annotate
@@ -105,35 +109,57 @@ class BuildWindow(tk.Tk):
 
     self.generateTreeBtn = tk.Button(self, text="Generate Tree",
                                       command=lambda: self.generateTree(self.queryScrollText.get("1.0", tk.END)))
+    self.generateTreeBtn["state"] = "disable"
     self.generateTreeBtn.grid(row=8, column=4)
 
 
 
 
-  def submit(self, host, port, dbName, user, password):
+  def connect(self, host, port, dbName, user, password):
 
     isConnected = self.preProcess.connectToDB(host,port,dbName,user,password)
 
     if(isConnected):
       messagebox.showinfo("PostgreSQL database", "PostgreSQL database Connected")
+      self.generateQueryBtn.config(state = tk.ACTIVE)
+      #self.generateTreeBtn.config(state = tk.ACTIVE)
     else:
       messagebox.showerror("PostgreSQL database", "PostgreSQL database Error")
 
     return
 
+  def reConnect(self, host, port, dbName, user, password):
 
-  def generate(self, queryText):
-    #annotation_text = self.preProcess.executeExplainQuery(queryText)
-    annotation_text = self.preProcess.executeExplainJSONQuery(queryText)
-    #print(annotation_text)
-    self.queryAnnotateScrollText.config(state='normal')
-    self.queryAnnotateScrollText.delete("1.0", tk.END)
+    self.preProcess.connectToDB(host,port,dbName,user,password)
 
-    node = parse_json(annotation_text)
-    print(json.dumps(annotation_text))
-    self.queryAnnotateScrollText.insert(tk.END, textVersion(node))
-    self.queryAnnotateScrollText.update()
-    self.queryAnnotateScrollText.config(state='disable')
+    return
+
+
+  def generate(self, queryText, host, port, dbName, user, password):
+    try:
+      #annotation_text = self.preProcess.executeExplainQuery(queryText)
+      annotation_text = self.preProcess.executeExplainJSONQuery(queryText)
+      #print(annotation_text)
+      self.queryAnnotateScrollText.config(state='normal')
+      self.queryAnnotateScrollText.delete("1.0", tk.END)
+
+      node = parse_json(annotation_text)
+      print(json.dumps(annotation_text))
+      self.queryAnnotateScrollText.insert(tk.END, textVersion(node))
+      self.queryAnnotateScrollText.update()
+      self.queryAnnotateScrollText.config(state='disable')
+      self.generateTreeBtn.config(state=tk.ACTIVE)
+    except:
+      messagebox.showerror("PostgreSQL database", "PostgreSQL SQL Query Error")
+      #clear query text
+      self.queryScrollText.delete('1.0', tk.END)
+
+      self.generateTreeBtn.config(state=tk.DISABLED)
+      self.reConnect(host, port, dbName, user, password)
+      #clear annotate text
+      self.queryAnnotateScrollText.config(state='normal')
+      self.queryAnnotateScrollText.delete('1.0', tk.END)
+      self.queryAnnotateScrollText.config(state='disable')
 
     #print(annotation_text)
 
