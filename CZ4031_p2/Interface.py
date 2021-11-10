@@ -28,7 +28,8 @@ class BuildWindow(tk.Tk):
 
   def __init__(self, *args, **kwargs):
     tk.Tk.__init__(self, *args, **kwargs)
-
+    # fixed window size
+    BuildWindow.resizable(self, width=False, height=False)
     self.titleLabel = tk.Label(self, text = "Database Query Plan Generator ", font='Times 24 italic')
     self.titleLabel.grid(row=0, column=1, columnspan=4)
 
@@ -144,7 +145,7 @@ class BuildWindow(tk.Tk):
       self.queryAnnotateScrollText.delete("1.0", tk.END)
 
       node = parse_json(annotation_text)
-      print(json.dumps(annotation_text))
+      #print(json.dumps(annotation_text))
       self.queryAnnotateScrollText.insert(tk.END, textVersion(node))
       self.queryAnnotateScrollText.update()
       self.queryAnnotateScrollText.config(state='disable')
@@ -169,7 +170,7 @@ class BuildWindow(tk.Tk):
     node = parse_json(annotation_text)
 
     # print text style tree
-    print(self.get_tree(annotation_text))
+    #print(self.get_tree(annotation_text))
 
 
     # print using ete3 tree
@@ -199,7 +200,7 @@ class BuildWindow(tk.Tk):
     t.show(tree_style=ts)
     #t.show()
 
-    print(t)
+    #print(t)
 
   def get_tree(self, json_obj):
     head = parse_json(json_obj)
