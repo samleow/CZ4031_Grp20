@@ -1,5 +1,4 @@
 import tkinter as tk
-import customtkinter as ctk
 import Preprocessing as preprocessing
 from Annotation import parse_json, textVersion, generate_tree, convert_tree_string
 from tkinter import messagebox
