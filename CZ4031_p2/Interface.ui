@@ -1,0 +1,211 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.1">
+  <object class="tk.Frame" id="MainWindow">
+    <property name="height">400</property>
+    <property name="width">500</property>
+    <layout manager="pack">
+      <property name="propagate">True</property>
+      <property name="side">top</property>
+    </layout>
+    <child>
+      <object class="tk.Label" id="HeadingLabel">
+        <property name="font">{Century Gothic} 14 {bold}</property>
+        <property name="justify">center</property>
+        <property name="padx">5</property>
+        <property name="pady">5</property>
+        <property name="relief">flat</property>
+        <property name="text" translatable="yes">Database Query Plan Generator by Group 20</property>
+        <layout manager="place">
+          <property name="anchor">center</property>
+          <property name="relx">0.5</property>
+          <property name="y">15</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="DBConnect">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="takefocus">false</property>
+        <property name="text" translatable="yes">Database Connection</property>
+        <layout manager="place">
+          <property name="anchor">center</property>
+          <property name="relx">0.5</property>
+          <property name="x">0</property>
+          <property name="y">50</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="HostLabel">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Host</property>
+        <layout manager="place">
+          <property name="anchor">nw</property>
+          <property name="x">30</property>
+          <property name="y">75</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Entry" id="HostText">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <layout manager="place">
+          <property name="anchor">nw</property>
+          <property name="x">120</property>
+          <property name="y">75</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="UsernameLabel">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Username</property>
+        <layout manager="place">
+          <property name="anchor">nw</property>
+          <property name="x">30</property>
+          <property name="y">125</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Entry" id="UsernameText">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <layout manager="place">
+          <property name="anchor">nw</property>
+          <property name="x">120</property>
+          <property name="y">125</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="PasswordLabel">
+        <property name="compound">top</property>
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="justify">left</property>
+        <property name="text" translatable="yes">Password</property>
+        <layout manager="place">
+          <property name="anchor">nw</property>
+          <property name="x">30</property>
+          <property name="y">175</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Entry" id="PasswordText">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="PortLabel">
+        <property name="anchor">n</property>
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Port</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Entry" id="PortText">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="DBNameLabel">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Database Name</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Entry" id="DBNameText">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Button" id="ConnectButton">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Connect!</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="InputQueryLabel">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Input Query</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="pygubu.builder.widgets.tkinterscrolledtext" id="InputQueryScrolledText">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Button" id="GenerateQueryPlanButton">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Generate Query Plan</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Label" id="AnnotatedSQLQueryLabel">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="takefocus">false</property>
+        <property name="text" translatable="yes">Annotated SQL Query</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="pygubu.builder.widgets.tkinterscrolledtext" id="AnnotatedQueryScrolledText">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Button" id="GenerateTreeButton">
+        <property name="font">{Century Gothic} 12 {}</property>
+        <property name="text" translatable="yes">Generate Tree</property>
+        <layout manager="pack">
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+  </object>
+</interface>
