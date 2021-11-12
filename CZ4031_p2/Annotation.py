@@ -441,4 +441,3 @@ def convert_tree_string(node):
 #     new_str = new_str[1:] # remove first ,
 #     #print( "new str: "+new_str)
 #     return new_str
-
