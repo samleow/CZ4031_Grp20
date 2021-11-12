@@ -111,6 +111,10 @@ class BuildWindow(tk.Tk):
     self.generateTreeBtn["state"] = "disable"
     self.generateTreeBtn.grid(row=8, column=4)
 
+    self.generateTreeBtn = tk.Button(self, text = "Generate Tree", font = ("Century Gothic", 9),
+                                      command = lambda: self.generateTree(self.queryScrollText.get("1.0", tk.END)))
+    self.generateTreeBtn.grid(row = 8, column = 4)
+
   def connect(self, host, port, dbName, user, password):
 
     isConnected = self.preProcess.connectToDB(host,port,dbName,user,password)
