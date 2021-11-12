@@ -1,34 +1,24 @@
 import tkinter as tk
 import Preprocessing as preprocessing
-#from Annotation import parse_json, textVersion, generate_tree, convert_tree_string
-from Annotation2 import parse_json, textVersion, generate_tree, convert_tree_string
+from Annotation import parse_json, tree_as_string, convert_to_ete3
 from tkinter import messagebox, scrolledtext 
 from ete3 import *
-import PyQt5
-import re
-from graphviz import Digraph
 
 import json
 
 class BuildWindow(tk.Tk):
 
-  #default login value
+  # Database connection and login attributes
   hostNameTxt = "localhost"
   portTxt = 5432
   dbNametxt = "TPC-H"
   usernameTxt = "postgres"
-  #passwordTxt = "password"
   passwordTxt = "P@ssw0rd123"
 
-
-
-
   preProcess = preprocessing.Preprocessing()
-  #anno = annotation.Annotation();
 
   def __init__(self, *args, **kwargs):
     tk.Tk.__init__(self, *args, **kwargs)
-    # fixed window size
     BuildWindow.resizable(self, width=False, height=False)
     self.titleLabel = tk.Label(self, text = "Database Query Plan Generator ", font='Times 24 italic')
     self.titleLabel.grid(row=0, column=1, columnspan=4)
@@ -80,7 +70,6 @@ class BuildWindow(tk.Tk):
     connect_btn = tk.Button(self, text="Connect", command=lambda : self.connect(self.hostNameEntry.get(), self.portEntry.get(), self.dbNameEntry.get(), self.userNameEntry.get(), self.passwordEntry.get()))
     connect_btn.grid(row=4, column=3, columnspan=2, pady=5, ipadx=100)
 
-
     #input query
     self.queryLabel = tk.Label(self, text="Input Query")
     self.queryLabel.grid(row=5, column=0, columnspan=4, pady=5)
@@ -113,9 +102,7 @@ class BuildWindow(tk.Tk):
     self.generateTreeBtn["state"] = "disable"
     self.generateTreeBtn.grid(row=8, column=4)
 
-
-
-
+  # connect to database
   def connect(self, host, port, dbName, user, password):
 
     isConnected = self.preProcess.connectToDB(host,port,dbName,user,password)
@@ -123,12 +110,12 @@ class BuildWindow(tk.Tk):
     if(isConnected):
       messagebox.showinfo("PostgreSQL database", "PostgreSQL database Connected")
       self.generateQueryBtn.config(state = tk.ACTIVE)
-      #self.generateTreeBtn.config(state = tk.ACTIVE)
     else:
       messagebox.showerror("PostgreSQL database", "PostgreSQL database Error")
 
     return
 
+  # reconnect to database
   def reConnect(self, host, port, dbName, user, password):
 
     self.preProcess.connectToDB(host,port,dbName,user,password)
@@ -138,15 +125,12 @@ class BuildWindow(tk.Tk):
 
   def generate(self, queryText, host, port, dbName, user, password):
     try:
-      #annotation_text = self.preProcess.executeExplainQuery(queryText)
       annotation_text = self.preProcess.executeExplainJSONQuery(queryText)
-      #print(annotation_text)
       self.queryAnnotateScrollText.config(state='normal')
       self.queryAnnotateScrollText.delete("1.0", tk.END)
 
       node = parse_json(annotation_text)
-      #print(json.dumps(annotation_text))
-      self.queryAnnotateScrollText.insert(tk.END, textVersion(node))
+      self.queryAnnotateScrollText.insert(tk.END, tree_as_string(node))
       self.queryAnnotateScrollText.update()
       self.queryAnnotateScrollText.config(state='disable')
       self.generateTreeBtn.config(state=tk.ACTIVE)
@@ -174,7 +158,7 @@ class BuildWindow(tk.Tk):
 
 
     # print using ete3 tree
-    tree_format = convert_tree_string(node)
+    tree_format = convert_to_ete3(node)
     t = Tree(tree_format + ";", format=1)
     ts = TreeStyle()
     ts.show_leaf_name = False
@@ -191,48 +175,10 @@ class BuildWindow(tk.Tk):
     for n in t.traverse():
       n.set_style(nstyle)
 
-    # this function somehow display the names in the tree
+    #  display the names in the tree
     def my_layout(node):
       F = TextFace(" " + node.name + " ")
       F.rotation = 270
       add_face_to_node(F, node, column=0, position="branch-right")
     ts.layout_fn = my_layout
     t.show(tree_style=ts)
-    #t.show()
-
-    #print(t)
-
-  def get_tree(self, json_obj):
-    head = parse_json(json_obj)
-    return generate_tree("", head)
-
-    # tree_format2 = convert_tree_graphviz(node)
-    #
-    # # for i in tree_format2:
-    # #   print("format 2: " + i)
-    #
-    # list = re.split(',',tree_format2)
-    #
-    # graph = Digraph()
-    #
-    # l = len(list)
-    #
-    # for i in list:
-    #   print("list: " + i)
-    #   temp = re.split('->',i)
-    #   for index, obj in enumerate(temp):
-    #     graph.edge(obj[index], obj[index + 1])
-
-    # print("format 2: "+ tree_format2)
-
-  # def generateTree(self):
-  #   print(self.get_tree(annotation_text))
-
-
-
-
-
-
-
-# app = BuildWindow()
-# app.mainloop()
